@@ -1,10 +1,7 @@
-﻿using Playnite.SDK;
-using Playnite.SDK.Data;
-using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -14,50 +11,95 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using Playnite.SDK;
+using Playnite.SDK.Data;
+using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 
 namespace Extras
 {
     [System.AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = true)]
-    public class GamePropertyAttribute : DontSerializeAttribute {}
+    public class GamePropertyAttribute : DontSerializeAttribute { }
 
     public class GameProperties : ObservableObject
     {
         public static readonly GameProperties Instance = new GameProperties();
 
-        private GameProperties() {}
+        private GameProperties() { }
 
         private bool hidden;
-        public bool Hidden { get => hidden; set => SetValue(ref hidden, value); }
+        public bool Hidden
+        {
+            get => hidden;
+            set => SetValue(ref hidden, value);
+        }
 
         private string notes;
-        public string Notes { get => notes; set => SetValue(ref notes, value); }
+        public string Notes
+        {
+            get => notes;
+            set => SetValue(ref notes, value);
+        }
 
         private bool favorite;
-        public bool Favorite { get => favorite; set => SetValue(ref favorite, value); }
+        public bool Favorite
+        {
+            get => favorite;
+            set => SetValue(ref favorite, value);
+        }
 
         private string completion;
-        public string Completion { get => completion; set => SetValue(ref completion, value); }
+        public string Completion
+        {
+            get => completion;
+            set => SetValue(ref completion, value);
+        }
     }
 
     public class ExtrasSettings : ObservableObject
     {
         private bool enableGameMenuRating = false;
-        public bool EnableGameMenuRating { get => enableGameMenuRating; set => SetValue(ref enableGameMenuRating, value); }
+        public bool EnableGameMenuRating
+        {
+            get => enableGameMenuRating;
+            set => SetValue(ref enableGameMenuRating, value);
+        }
 
         private bool enableSelectionPreservation = true;
-        public bool EnableSelectionPreservation { get => enableSelectionPreservation; set => SetValue(ref enableSelectionPreservation, value); }
+        public bool EnableSelectionPreservation
+        {
+            get => enableSelectionPreservation;
+            set => SetValue(ref enableSelectionPreservation, value);
+        }
 
         private bool backupAndRestore = true;
-        public bool BackupAndRestore { get => backupAndRestore; set => SetValue(ref backupAndRestore, value); }
+        public bool BackupAndRestore
+        {
+            get => backupAndRestore;
+            set => SetValue(ref backupAndRestore, value);
+        }
 
         private string lastThemeId = null;
-        public string LastThemeId { get => lastThemeId; set => SetValue(ref lastThemeId, value); }
+        public string LastThemeId
+        {
+            get => lastThemeId;
+            set => SetValue(ref lastThemeId, value);
+        }
 
         private bool applyThemeIconOnChange = false;
-        public bool ApplyThemeIconOnChange { get => applyThemeIconOnChange; set => SetValue(ref applyThemeIconOnChange, value); }
+        public bool ApplyThemeIconOnChange
+        {
+            get => applyThemeIconOnChange;
+            set => SetValue(ref applyThemeIconOnChange, value);
+        }
 
-        private Dictionary<string, Dictionary<string, string>> persistentResources = new Dictionary<string, Dictionary<string, string>>();
-        public Dictionary<string, Dictionary<string, string>> PersistentResources { get => persistentResources; set => SetValue(ref persistentResources, value); }
+        private Dictionary<string, Dictionary<string, string>> persistentResources =
+            new Dictionary<string, Dictionary<string, string>>();
+        public Dictionary<string, Dictionary<string, string>> PersistentResources
+        {
+            get => persistentResources;
+            set => SetValue(ref persistentResources, value);
+        }
 
         [DontSerialize]
         public CommandSettings Commands { get; } = CommandSettings.Instance;
@@ -72,13 +114,28 @@ namespace Extras
         public ObservableCollection<Game> RunningGames { get; } = new ObservableCollection<Game>();
 
         private bool isAnyGameRunning = false;
-        [DontSerialize]
-        public bool IsAnyGameRunning { get => isAnyGameRunning; set => SetValue(ref isAnyGameRunning, value); }
 
         [DontSerialize]
-        public IValueConverter IntToRatingBrushConverter { get; } = new Converters.IntToRatingBrushConverter();
+        public bool IsAnyGameRunning
+        {
+            get => isAnyGameRunning;
+            set => SetValue(ref isAnyGameRunning, value);
+        }
 
-        
+        [DontSerialize]
+        public IValueConverter IntToRatingBrushConverter { get; } =
+            new Converters.IntToRatingBrushConverter();
+
+        // Přidáno pro potřeby nového příkazu:
+        private readonly IPlayniteAPI PlayniteApi;
+        public Game SelectedGame { get; set; }
+
+        public ExtrasSettings() { }
+
+        public ExtrasSettings(IPlayniteAPI api)
+        {
+            PlayniteApi = api;
+        }
     }
 
     public class ExtrasSettingsViewModel : ObservableObject, ISettings
@@ -100,9 +157,20 @@ namespace Extras
 
         public ViewModels.ThemeExtrasManifestViewModel ExtendedThemesViewModel { get; set; }
 
-        public ICommand OpenUserLinkIconDir => new RelayCommand(() => System.Diagnostics.Process.Start(ThemeExtras.Instance.UserLinkIconDir));
+        public ICommand OpenUserLinkIconDir =>
+            new RelayCommand(() =>
+                System.Diagnostics.Process.Start(ThemeExtras.Instance.UserLinkIconDir)
+            );
 
-        public ICommand OpenBannersDirectory => new RelayCommand(() => System.Diagnostics.Process.Start(Path.Combine(ThemeExtras.Instance.GetPluginUserDataPath(), ThemeExtras.BannersDirectoryName)));
+        public ICommand OpenBannersDirectory =>
+            new RelayCommand(() =>
+                System.Diagnostics.Process.Start(
+                    Path.Combine(
+                        ThemeExtras.Instance.GetPluginUserDataPath(),
+                        ThemeExtras.BannersDirectoryName
+                    )
+                )
+            );
 
         public ExtrasSettingsViewModel(ThemeExtras plugin)
         {
@@ -158,8 +226,8 @@ namespace Extras
         public static Menus Instance = new Menus();
 
         private bool isOpen;
-        public bool IsOpen 
-        { 
+        public bool IsOpen
+        {
             get => isOpen;
             set
             {
@@ -168,6 +236,7 @@ namespace Extras
                 {
                     OnPropertyChanged(nameof(EMLGameMenuItems));
                     OnPropertyChanged(nameof(BackgroundChangerGameMenuItems));
+                    OnPropertyChanged(nameof(PlayniteSoundGameMenuItems));
                 }
             }
         }
@@ -179,12 +248,30 @@ namespace Extras
                 var api = API.Instance;
                 var id = "705fdbca-e1fc-4004-b839-1d040b8b4429";
                 if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
-                    if (api.Addons?.Plugins?.FirstOrDefault(p => string.Equals(p.Id.ToString(), id, System.StringComparison.InvariantCultureIgnoreCase)) is Plugin plugin)
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
                     {
                         try
                         {
                             var items = CreateGameMenuItems(api, plugin);
-                            var settingsItem = new MenuItem { Header = ResourceProvider.GetString("LOCSettingsLabel"), Command = ThemeExtras.Instance.Settings.Commands.OpenPluginSettingsCommand, CommandParameter = id };
+                            var settingsItem = new MenuItem
+                            {
+                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
+                                Command = ThemeExtras
+                                    .Instance
+                                    .Settings
+                                    .Commands
+                                    .OpenPluginSettingsCommand,
+                                CommandParameter = id,
+                            };
                             if (items.Count > 0)
                             {
                                 items.Insert(0, new Separator());
@@ -194,7 +281,10 @@ namespace Extras
                         }
                         catch (System.Exception ex)
                         {
-                            ThemeExtras.logger.Debug(ex, $"Failed to create ExtraMetadata menu items.");
+                            ThemeExtras.logger.Debug(
+                                ex,
+                                $"Failed to create ExtraMetadata menu items."
+                            );
                         }
                     }
                 return null;
@@ -208,12 +298,30 @@ namespace Extras
                 var api = API.Instance;
                 var id = "3afdd02b-db6c-4b60-8faa-2971d6dfad2a";
                 if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
-                    if (api.Addons?.Plugins?.FirstOrDefault(p => string.Equals(p.Id.ToString(), id, System.StringComparison.InvariantCultureIgnoreCase)) is Plugin plugin)
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
                     {
                         try
                         {
                             var items = CreateGameMenuItems(api, plugin);
-                            var settingsItem = new MenuItem { Header = ResourceProvider.GetString("LOCSettingsLabel"), Command = ThemeExtras.Instance.Settings.Commands.OpenPluginSettingsCommand, CommandParameter = id };
+                            var settingsItem = new MenuItem
+                            {
+                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
+                                Command = ThemeExtras
+                                    .Instance
+                                    .Settings
+                                    .Commands
+                                    .OpenPluginSettingsCommand,
+                                CommandParameter = id,
+                            };
                             if (items.Count > 0)
                             {
                                 items.Insert(0, new Separator());
@@ -223,7 +331,10 @@ namespace Extras
                         }
                         catch (System.Exception ex)
                         {
-                            ThemeExtras.logger.Debug(ex, $"Failed to create BackgroundChanger menu items.");
+                            ThemeExtras.logger.Debug(
+                                ex,
+                                $"Failed to create BackgroundChanger menu items."
+                            );
                         }
                     }
                 return null;
@@ -234,35 +345,55 @@ namespace Extras
         {
             var menuItems = new ObservableCollection<object>();
             List<Game> games = api.MainView.SelectedGames?.Take(1).ToList() ?? new List<Game>();
-            foreach (var item in plugin.GetGameMenuItems(new GetGameMenuItemsArgs() { Games = games }))
+            foreach (
+                var item in plugin.GetGameMenuItems(new GetGameMenuItemsArgs() { Games = games })
+            )
             {
-                var path = item.MenuSection.Replace("@", "").Split(new[] { "|" }, StringSplitOptions.RemoveEmptyEntries).Skip(1).ToList();
+                var path = item
+                    .MenuSection.Replace("@", "")
+                    .Split(new[] { "|" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Skip(1)
+                    .ToList();
                 var currentMenuItems = menuItems;
                 for (int i = 0; i < path.Count; ++i)
                 {
                     var section = path[i];
-                    if (currentMenuItems.OfType<MenuItem>().FirstOrDefault(mi => mi.Header as string == section) is MenuItem menuItem)
+                    if (
+                        currentMenuItems
+                            .OfType<MenuItem>()
+                            .FirstOrDefault(mi => mi.Header as string == section)
+                        is MenuItem menuItem
+                    )
                     {
                         currentMenuItems = menuItem.ItemsSource as ObservableCollection<object>;
                     }
                     else
                     {
                         var itemList = new ObservableCollection<object>();
-                        currentMenuItems.Add(new MenuItem { Header = section, ItemsSource = itemList });
+                        currentMenuItems.Add(
+                            new MenuItem { Header = section, ItemsSource = itemList }
+                        );
                         currentMenuItems = itemList;
                     }
                 }
                 if (item.Description is "-")
                 {
                     currentMenuItems.Add(new Separator());
-                } else
+                }
+                else
                 {
-                    currentMenuItems.Add(new MenuItem
-                    {
-                        Header = item.Description,
-                        Command = new RelayCommand<GameMenuItemActionArgs>(item.Action),
-                        CommandParameter = new GameMenuItemActionArgs { Games = games, SourceItem = item }
-                    });
+                    currentMenuItems.Add(
+                        new MenuItem
+                        {
+                            Header = item.Description,
+                            Command = new RelayCommand<GameMenuItemActionArgs>(item.Action),
+                            CommandParameter = new GameMenuItemActionArgs
+                            {
+                                Games = games,
+                                SourceItem = item,
+                            },
+                        }
+                    );
                 }
             }
             return menuItems;
@@ -275,7 +406,8 @@ namespace Extras
 
         private CommandSettings() { }
 
-        public ICommand SwitchToDetailsViewCommand { get; } = new RelayCommand<Game>(SwitchToDetailsView);
+        public ICommand SwitchToDetailsViewCommand { get; } =
+            new RelayCommand<Game>(SwitchToDetailsView);
 
         private static void SwitchToDetailsView(Game game)
         {
@@ -341,8 +473,7 @@ namespace Extras
             }
         }
 
-        public ICommand OpenUrlCommand { get; } 
-            = new RelayCommand<object>(OpenUrl);
+        public ICommand OpenUrlCommand { get; } = new RelayCommand<object>(OpenUrl);
 
         public static void DiscardNotification(NotificationMessage notificationMessage)
         {
@@ -351,13 +482,28 @@ namespace Extras
                 API.Instance.Notifications.Remove(notificationMessage.Id);
                 if (API.Instance.Notifications.Count == 0)
                 {
-                    var mainWindow = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.Name == "WindowMain");
+                    var mainWindow = Application
+                        .Current.Windows.OfType<Window>()
+                        .FirstOrDefault(w => w.Name == "WindowMain");
                     if (mainWindow is Window)
                     {
-                        var notifcationPanel = PlayniteCommon.UI.UiHelper.FindVisualChildren<FrameworkElement>(mainWindow, "PART_Notifications").FirstOrDefault();
+                        var notifcationPanel = PlayniteCommon
+                            .UI.UiHelper.FindVisualChildren<FrameworkElement>(
+                                mainWindow,
+                                "PART_Notifications"
+                            )
+                            .FirstOrDefault();
                         if (notifcationPanel is FrameworkElement)
                         {
-                            if (PlayniteCommon.UI.UiHelper.FindVisualChildren<Button>(notifcationPanel, "PART_ButtonClose").FirstOrDefault() is Button closeButton)
+                            if (
+                                PlayniteCommon
+                                    .UI.UiHelper.FindVisualChildren<Button>(
+                                        notifcationPanel,
+                                        "PART_ButtonClose"
+                                    )
+                                    .FirstOrDefault()
+                                is Button closeButton
+                            )
                             {
                                 if (closeButton.Command?.CanExecute(null) ?? false)
                                 {
@@ -370,40 +516,95 @@ namespace Extras
             }
         }
 
-        public ICommand DiscardNotificationCommand { get; } 
-            = new RelayCommand<NotificationMessage>(DiscardNotification);
+        public ICommand DiscardNotificationCommand { get; } =
+            new RelayCommand<NotificationMessage>(DiscardNotification);
 
         public static void UpdateGames(object sender, EventArgs args)
         {
             API.Instance.Database.Games.Update(API.Instance.MainView.SelectedGames);
         }
 
-        public ICommand UpdateGamesCommand { get; }
-            = new RelayCommand(() =>
-            {
-                UpdateGames(null, null);
-            }, () => API.Instance?.MainView?.SelectedGames?.Count() > 0);
-
-        public ICommand ResetScoreCommand { get; }
-            = new RelayCommand<string>(kinds =>
-            {
-                foreach (var game in API.Instance.MainView.SelectedGames)
+        public ICommand UpdateGamesCommand { get; } =
+            new RelayCommand(
+                () =>
                 {
-                    if (kinds.Contains("User"))
+                    UpdateGames(null, null);
+                },
+                () => API.Instance?.MainView?.SelectedGames?.Count() > 0
+            );
+
+        public ICommand ResetScoreCommand { get; } =
+            new RelayCommand<string>(
+                kinds =>
+                {
+                    foreach (var game in API.Instance.MainView.SelectedGames)
                     {
-                        game.UserScore = null;
+                        if (kinds.Contains("User"))
+                        {
+                            game.UserScore = null;
+                        }
+                        if (kinds.Contains("Community"))
+                        {
+                            game.CommunityScore = null;
+                        }
+                        if (kinds.Contains("Critic"))
+                        {
+                            game.CriticScore = null;
+                        }
                     }
-                    if (kinds.Contains("Community"))
+                    API.Instance.Database.Games.Update(API.Instance.MainView.SelectedGames);
+                },
+                _ => API.Instance?.MainView?.SelectedGames?.Count() > 0
+            );
+
+        public ICommand OpenGameAssetFolderCommand { get; } =
+            new RelayCommand<Game>(
+                game =>
+                {
+                    string path = null;
+                    var api = API.Instance;
+                    if (game is Game)
                     {
-                        game.CommunityScore = null;
+                        path = Path.Combine(api.Database.DatabasePath, "files", game.Id.ToString());
                     }
-                    if (kinds.Contains("Critic"))
+                    else
                     {
-                        game.CriticScore = null;
+                        if (api?.MainView?.SelectedGames?.FirstOrDefault() is Game selected)
+                        {
+                            path = Path.Combine(
+                                api.Database.DatabasePath,
+                                "files",
+                                selected.Id.ToString()
+                            );
+                        }
                     }
+                    if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                    {
+                        System.Diagnostics.Process.Start(path);
+                    }
+                },
+                game =>
+                {
+                    string path = null;
+                    var api = API.Instance;
+                    if (game is Game)
+                    {
+                        path = Path.Combine(api.Database.DatabasePath, "files", game.Id.ToString());
+                    }
+                    else
+                    {
+                        if (api?.MainView?.SelectedGames?.FirstOrDefault() is Game selected)
+                        {
+                            path = Path.Combine(
+                                api.Database.DatabasePath,
+                                "files",
+                                selected.Id.ToString()
+                            );
+                        }
+                    }
+                    return !string.IsNullOrEmpty(path) && Directory.Exists(path);
                 }
-                API.Instance.Database.Games.Update(API.Instance.MainView.SelectedGames);
-            }, _ => API.Instance?.MainView?.SelectedGames?.Count() > 0);
+            );
 
         public ICommand OpenGameAssetFolderCommand { get; }
             = new RelayCommand<Game>(
@@ -446,9 +647,19 @@ namespace Extras
 
         public static void OpenPlayniteSettings(object sender, EventArgs args)
         {
-            if (Application.Current?.Windows?.OfType<Window>().FirstOrDefault(w => w.Name == "WindowMain") is Window mainWindow)
+            if (
+                Application
+                    .Current?.Windows?.OfType<Window>()
+                    .FirstOrDefault(w => w.Name == "WindowMain")
+                is Window mainWindow
+            )
             {
-                if (mainWindow.InputBindings.OfType<KeyBinding>().FirstOrDefault(b => b.Key == Key.F4) is KeyBinding binding)
+                if (
+                    mainWindow
+                        .InputBindings.OfType<KeyBinding>()
+                        .FirstOrDefault(b => b.Key == Key.F4)
+                    is KeyBinding binding
+                )
                 {
                     if (binding.Command.CanExecute(null))
                     {
@@ -458,152 +669,221 @@ namespace Extras
             }
         }
 
-        public ICommand OpenPlayniteSettingsCommand { get; }
-            = new RelayCommand(
-            () =>
-            {
-                OpenPlayniteSettings(null, null);
-            },
-            () => true);
-
-        public ICommand OpenAddonWindowCommand { get; }
-            = new RelayCommand(
-            () =>
-            {
-                if (Application.Current?.Windows?.OfType<Window>().FirstOrDefault(w => w.Name == "WindowMain") is Window mainWindow)
+        public ICommand OpenPlayniteSettingsCommand { get; } =
+            new RelayCommand(
+                () =>
                 {
-                    if (mainWindow.InputBindings.OfType<KeyBinding>().FirstOrDefault(b => b.Key == Key.F9) is KeyBinding binding)
+                    OpenPlayniteSettings(null, null);
+                },
+                () => true
+            );
+
+        public ICommand OpenAddonWindowCommand { get; } =
+            new RelayCommand(
+                () =>
+                {
+                    if (
+                        Application
+                            .Current?.Windows?.OfType<Window>()
+                            .FirstOrDefault(w => w.Name == "WindowMain")
+                        is Window mainWindow
+                    )
                     {
-                        if (binding.Command.CanExecute(null))
+                        if (
+                            mainWindow
+                                .InputBindings.OfType<KeyBinding>()
+                                .FirstOrDefault(b => b.Key == Key.F9)
+                            is KeyBinding binding
+                        )
                         {
-                            binding.Command.Execute(null);
+                            if (binding.Command.CanExecute(null))
+                            {
+                                binding.Command.Execute(null);
+                            }
                         }
                     }
-                }
-            },
-            () => true);
+                },
+                () => true
+            );
 
-        public ICommand SwitchModeCommand { get; }
-            = new RelayCommand(
-            () =>
-            {
-                if (Application.Current?.Windows?.OfType<Window>().FirstOrDefault(w => w.Name == "WindowMain") is Window mainWindow)
+        public ICommand SwitchModeCommand { get; } =
+            new RelayCommand(
+                () =>
                 {
-                    if (mainWindow.InputBindings.OfType<KeyBinding>().FirstOrDefault(b => b.Key == Key.F11) is KeyBinding binding)
+                    if (
+                        Application
+                            .Current?.Windows?.OfType<Window>()
+                            .FirstOrDefault(w => w.Name == "WindowMain")
+                        is Window mainWindow
+                    )
                     {
-                        if (binding.Command.CanExecute(null))
+                        if (
+                            mainWindow
+                                .InputBindings.OfType<KeyBinding>()
+                                .FirstOrDefault(b => b.Key == Key.F11)
+                            is KeyBinding binding
+                        )
                         {
-                            binding.Command.Execute(null);
+                            if (binding.Command.CanExecute(null))
+                            {
+                                binding.Command.Execute(null);
+                            }
                         }
                     }
-                }
-            },
-            () => true);
+                },
+                () => true
+            );
 
-        public ICommand OpenPluginSettingsCommand { get; }
-            = new RelayCommand<string>(
-            id =>
-            {
-                var api = API.Instance;
-                if (api.Addons?.Plugins?.FirstOrDefault(p => string.Equals(p.Id.ToString(), id, System.StringComparison.InvariantCultureIgnoreCase)) is Plugin plugin)
+        public ICommand OpenPluginSettingsCommand { get; } =
+            new RelayCommand<string>(
+                id =>
                 {
-                    try
+                    var api = API.Instance;
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
                     {
-                        plugin.OpenSettingsView();
-                    }
-                    catch (System.Exception ex)
-                    {
-                        ThemeExtras.logger.Debug(ex, $"Failed to open plugin settings for plugin with Id: {id}");
-                    }
-                }
-            },
-            id =>
-            {
-                var api = API.Instance;
-                if (api.Addons?.Plugins?.FirstOrDefault(p => string.Equals(p.Id.ToString(), id, System.StringComparison.InvariantCultureIgnoreCase)) is Plugin plugin)
-                {
-                    if (plugin is GenericPlugin genericPlugin) return genericPlugin.Properties?.HasSettings ?? false;
-                    if (plugin is LibraryPlugin libraryPlugin) return libraryPlugin.Properties?.HasSettings ?? false;
-                    if (plugin is MetadataPlugin metadataPlugin) return metadataPlugin.Properties?.HasSettings ?? false;
-                }
-                return false;
-            });
-
-        public ICommand OpenPluginConfigDirCommand { get; }
-            = new RelayCommand<string>(
-            id =>
-            {
-                var api = API.Instance;
-                if (api.Addons?.Plugins?.FirstOrDefault(p => string.Equals(p.Id.ToString(), id, System.StringComparison.InvariantCultureIgnoreCase)) is Plugin plugin)
-                {
-                    try
-                    {
-                        System.Diagnostics.Process.Start(plugin.GetPluginUserDataPath());
-                    }
-                    catch (System.Exception ex)
-                    {
-                        ThemeExtras.logger.Debug(ex, $"Failed to open config directory for plugin with Id: {id}");
-                    }
-                }
-            },
-            id =>
-            {
-                var api = API.Instance;
-                if (api.Addons?.Plugins?.FirstOrDefault(p => string.Equals(p.Id.ToString(), id, System.StringComparison.InvariantCultureIgnoreCase)) is Plugin plugin)
-                {
-                    return string.IsNullOrEmpty(plugin.GetPluginUserDataPath());
-                }
-                return false;
-            });
-
-        public ICommand OpenPlayniteLogCommand { get; }
-            = new RelayCommand<string>(
-            id =>
-            {
-                var api = API.Instance;
-                if (api?.Paths?.ConfigurationPath is string path)
-                {
-                    var logPath = Path.Combine(path, "playnite.log");
-                    try
-                    {
-                        if (File.Exists(logPath))
+                        try
                         {
-                            System.Diagnostics.Process.Start(logPath);
+                            plugin.OpenSettingsView();
+                        }
+                        catch (System.Exception ex)
+                        {
+                            ThemeExtras.logger.Debug(
+                                ex,
+                                $"Failed to open plugin settings for plugin with Id: {id}"
+                            );
                         }
                     }
-                    catch (System.Exception ex)
-                    {
-                        ThemeExtras.logger.Debug(ex, $"Failed to open {logPath}");
-                    }
-                }
-            },
-            id => true);
-
-        public ICommand OpenExtensionsLogCommand { get; }
-            = new RelayCommand<string>(
-            id =>
-            {
-                var api = API.Instance;
-                if (api?.Paths?.ConfigurationPath is string path)
+                },
+                id =>
                 {
-                    var logPath = Path.Combine(path, "extensions.log");
-                    try
+                    var api = API.Instance;
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
                     {
-                        if (File.Exists(logPath))
+                        if (plugin is GenericPlugin genericPlugin)
+                            return genericPlugin.Properties?.HasSettings ?? false;
+                        if (plugin is LibraryPlugin libraryPlugin)
+                            return libraryPlugin.Properties?.HasSettings ?? false;
+                        if (plugin is MetadataPlugin metadataPlugin)
+                            return metadataPlugin.Properties?.HasSettings ?? false;
+                    }
+                    return false;
+                }
+            );
+
+        public ICommand OpenPluginConfigDirCommand { get; } =
+            new RelayCommand<string>(
+                id =>
+                {
+                    var api = API.Instance;
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
+                    {
+                        var configPath = Path.Combine(
+                            api.Paths.ConfigurationPath,
+                            "Extensions",
+                            id
+                        );
+                        if (Directory.Exists(configPath))
                         {
-                            System.Diagnostics.Process.Start(logPath);
+                            System.Diagnostics.Process.Start(configPath);
+                        }
+                        else
+                        {
+                            api.Dialogs.ShowMessage(
+                                $"Plugin configuration directory does not exist.\n{configPath}"
+                            );
                         }
                     }
-                    catch (System.Exception ex)
+                },
+                id => true
+            );
+
+        public ICommand BackCommand { get; } =
+            new RelayCommand(
+                () =>
+                {
+                    if (
+                        Application
+                            .Current?.Windows?.OfType<Window>()
+                            .FirstOrDefault(w => w.Name == "WindowMain")
+                        is Window mainWindow
+                    )
                     {
-                        ThemeExtras.logger.Debug(ex, $"Failed to open {logPath}");
+                        if (
+                            mainWindow
+                                .InputBindings.OfType<KeyBinding>()
+                                .FirstOrDefault(b =>
+                                    b.Key == Key.BrowserBack
+                                    || (b.Key == Key.Left && b.Modifiers == ModifierKeys.Alt)
+                                )
+                            is KeyBinding binding
+                        )
+                        {
+                            if (binding.Command.CanExecute(null))
+                            {
+                                binding.Command.Execute(null);
+                            }
+                        }
                     }
-                }
-            },
-            id => true);
+                },
+                () => true
+            );
 
-        public ICommand BackCommand { get; } = new RaisableCommand(ThemeExtras.Instance.NavigateBack, () => ThemeExtras.Instance.Navigation.CanGoBack);
-
-        public ICommand ForwardCommand { get; } = new RaisableCommand(ThemeExtras.Instance.NavigateForward, () => ThemeExtras.Instance.Navigation.CanGoForward);
+        public ICommand ForwardCommand { get; } =
+            new RelayCommand(
+                () =>
+                {
+                    if (
+                        Application
+                            .Current?.Windows?.OfType<Window>()
+                            .FirstOrDefault(w => w.Name == "WindowMain")
+                        is Window mainWindow
+                    )
+                    {
+                        if (
+                            mainWindow
+                                .InputBindings.OfType<KeyBinding>()
+                                .FirstOrDefault(b =>
+                                    b.Key == Key.BrowserForward
+                                    || (b.Key == Key.Right && b.Modifiers == ModifierKeys.Alt)
+                                )
+                            is KeyBinding binding
+                        )
+                        {
+                            if (binding.Command.CanExecute(null))
+                            {
+                                binding.Command.Execute(null);
+                            }
+                        }
+                    }
+                },
+                () => true
+            );
     }
 }
