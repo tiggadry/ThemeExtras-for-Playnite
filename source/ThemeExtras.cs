@@ -1,12 +1,4 @@
-﻿using Extras.Abstractions.Navigation;
-using Extras.Models;
-using Playnite.SDK;
-using Playnite.SDK.Data;
-using Playnite.SDK.Events;
-using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
-using PlayniteCommon.UI;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing.Text;
@@ -25,6 +17,14 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Extras.Abstractions.Navigation;
+using Extras.Models;
+using Playnite.SDK;
+using Playnite.SDK.Data;
+using Playnite.SDK.Events;
+using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
+using PlayniteCommon.UI;
 using static System.Reflection.BindingFlags;
 
 namespace Extras
@@ -55,13 +55,16 @@ namespace Extras
 
         public string UserLinkIconDir => Path.Combine(GetPluginUserDataPath(), "LinkIcons");
 
-        public string DefaultBannerOverride => Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "Default.png");
-        public string BannersBySourceNameOverride => Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "BySourceName");
-        public string BannersByPlatformIdOverride => Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "ByPlatformSpecId");
-        public string BannersByPluginIdOverride => Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "ByPluginId");
-        public string BannersByPlatformNameOverride => Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "ByPlatformName");
-
-
+        public string DefaultBannerOverride =>
+            Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "Default.png");
+        public string BannersBySourceNameOverride =>
+            Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "BySourceName");
+        public string BannersByPlatformIdOverride =>
+            Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "ByPlatformSpecId");
+        public string BannersByPluginIdOverride =>
+            Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "ByPluginId");
+        public string BannersByPlatformNameOverride =>
+            Path.Combine(GetPluginUserDataPath(), BannersDirectoryName, "ByPlatformName");
 
         public ExtrasSettings Settings => settingsViewModel?.Settings;
         public ExtrasSettingsViewModel settingsViewModel { get; set; }
@@ -71,54 +74,69 @@ namespace Extras
 
         public readonly BannerCache BannerCache;
 
-        public ThemeExtras(IPlayniteAPI api) : base(api)
+        public ThemeExtras(IPlayniteAPI api)
+            : base(api)
         {
             Instance = this;
             settingsViewModel = new ExtrasSettingsViewModel(this);
             var extendedThemes = ExtendedTheme.CreateExtendedManifests();
-            settingsViewModel.ExtendedThemesViewModel = new ViewModels.ThemeExtrasManifestViewModel(extendedThemes);
+            settingsViewModel.ExtendedThemesViewModel = new ViewModels.ThemeExtrasManifestViewModel(
+                extendedThemes
+            );
 
             CurrentTheme = extendedThemes.FirstOrDefault(theme => theme.IsCurrentTheme);
 
-            Properties = new GenericPluginProperties
-            {
-                HasSettings = true
-            };
+            Properties = new GenericPluginProperties { HasSettings = true };
 
-            AddCustomElementSupport(new AddCustomElementSupportArgs
-            {
-                SourceName = ExtensionName,
-                ElementList = new List<string>
+            AddCustomElementSupport(
+                new AddCustomElementSupportArgs
                 {
-                    SettableCompletionStatus,
-                    SettableFavorite,
-                    SettableHidden,
-                    SettableUserScore,
-                    UserRatingElement,
-                    CommunityRatingElement,
-                    CriticRatingElement,
-                    CompletionStatusComboBox,
-                    BannerElement,
-                    BannerData,
-                    LinksElement,
-                    EditableTags,
-                }.SelectMany(e => Enumerable.Range(0, 3).Select(i => e + (i == 0 ? "" : i.ToString()))).ToList()
-            });
-            AddSettingsSupport(new AddSettingsSupportArgs { SourceName = ExtensionName, SettingsRoot = "settingsViewModel.Settings" });
-
-            AddConvertersSupport(new AddConvertersSupportArgs
-            {
-                SourceName = ExtensionName,
-                Converters = new List<IValueConverter> {
-                    new Converters.PowConverter(),
-                    new Converters.UrlToAsyncIconConverter(),
-                    new Converters.MultiplicativeInverseConverter(),
-                    new Converters.DivideConverter(),
-                    new Converters.MultiplyConverter(),
-                    new Converters.DoubleToSmoothedValueConverter(),
-                    new Converters.DoubleToCornerRadiusConverter(),
+                    SourceName = ExtensionName,
+                    ElementList = new List<string>
+                    {
+                        SettableCompletionStatus,
+                        SettableFavorite,
+                        SettableHidden,
+                        SettableUserScore,
+                        UserRatingElement,
+                        CommunityRatingElement,
+                        CriticRatingElement,
+                        CompletionStatusComboBox,
+                        BannerElement,
+                        BannerData,
+                        LinksElement,
+                        EditableTags,
+                    }
+                        .SelectMany(e =>
+                            Enumerable.Range(0, 3).Select(i => e + (i == 0 ? "" : i.ToString()))
+                        )
+                        .ToList(),
                 }
-            });
+            );
+            AddSettingsSupport(
+                new AddSettingsSupportArgs
+                {
+                    SourceName = ExtensionName,
+                    SettingsRoot = "settingsViewModel.Settings",
+                }
+            );
+
+            AddConvertersSupport(
+                new AddConvertersSupportArgs
+                {
+                    SourceName = ExtensionName,
+                    Converters = new List<IValueConverter>
+                    {
+                        new Converters.PowConverter(),
+                        new Converters.UrlToAsyncIconConverter(),
+                        new Converters.MultiplicativeInverseConverter(),
+                        new Converters.DivideConverter(),
+                        new Converters.MultiplyConverter(),
+                        new Converters.DoubleToSmoothedValueConverter(),
+                        new Converters.DoubleToCornerRadiusConverter(),
+                    },
+                }
+            );
 
             AddPropertiesAsResources<ICommand>(Settings.Commands);
 
@@ -146,92 +164,29 @@ namespace Extras
                 BannersByPlatformNamePath = BannersByPlatformNameOverride,
                 BannersByPluginIdPath = BannersByPluginIdOverride,
                 BannersBySpecIdPath = BannersByPlatformIdOverride,
-                BannersBySourceNamePath = BannersBySourceNameOverride
+                BannersBySourceNamePath = BannersBySourceNameOverride,
             };
 
-            BannerCache = new BannerCache(extendedThemes.Where(t => t.IsCurrentTheme).OfType<IBannerProvider>().Concat(new[] { directoryBannerProvider }).ToArray());
+            BannerCache = new BannerCache(
+                extendedThemes
+                    .Where(t => t.IsCurrentTheme)
+                    .OfType<IBannerProvider>()
+                    .Concat(new[] { directoryBannerProvider })
+                    .ToArray()
+            );
         }
 
-        private void Settings_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void Settings_PropertyChanged(
+            object sender,
+            System.ComponentModel.PropertyChangedEventArgs e
+        )
         {
-            if (PlayniteApi.MainView.SelectedGames?.FirstOrDefault() is Game current)
-            {
-                if (GameSettingsProperties.FirstOrDefault(p => p.Name == e.PropertyName) is PropertyInfo property)
-                {
-                    if (GameProperties.FirstOrDefault(p => p.Name == property.Name) is PropertyInfo gameProperty)
-                    {
-                        PlayniteApi.Database.Games.ItemUpdated -= Games_ItemUpdated;
-                        Settings.Game.PropertyChanged -= Settings_PropertyChanged;
-                        try
-                        {
-                            var prevSelected = PlayniteApi.MainView.SelectedGames.ToList();
-                            var wasSet = false;
-                            foreach (var game in PlayniteApi.MainView.SelectedGames)
-                            {
-                                if (property.PropertyType == gameProperty.PropertyType)
-                                {
-                                    var currentValue = gameProperty.GetValue(game);
-                                    var newValue = property.GetValue(Settings.Game);
-                                    if (!object.Equals(currentValue, newValue))
-                                    {
-                                        gameProperty.SetValue(game, newValue);
-                                        wasSet = true;
-                                    }
-                                }
-                            }
-                            if (wasSet)
-                            {
-                                PlayniteApi.Database.Games.Update(PlayniteApi.MainView.SelectedGames);
-                                var newSelection = PlayniteApi.MainView.SelectedGames.ToList();
-                                if (!Enumerable.SequenceEqual(prevSelected, newSelection))
-                                {
-                                    PlayniteApi.MainView.SelectGame(prevSelected.First().Id);
-                                    PlayniteApi.MainView.SelectGames(prevSelected.Select(g => g.Id));
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Debug(ex, $"Failed to update property {gameProperty.Name} for {current.Name}.");
-                        }
-                        Settings.Game.PropertyChanged += Settings_PropertyChanged;
-                        PlayniteApi.Database.Games.ItemUpdated += Games_ItemUpdated;
-                    }
-                }
-            }
+            // Settings property change handling - GameProperties functionality removed
         }
 
         private void Games_ItemUpdated(object sender, ItemUpdatedEventArgs<Game> e)
         {
-            if (PlayniteApi.MainView.SelectedGames?.FirstOrDefault() is Game currentGame)
-            {
-                if (e?.UpdatedItems?.FirstOrDefault(g => g.NewData.Id == currentGame.Id) is ItemUpdateEvent<Game> update)
-                {
-                    var editedGame = update.NewData;
-                    foreach (var property in GameSettingsProperties)
-                    {
-                        if (GameProperties.FirstOrDefault(p => p.Name == property.Name) is PropertyInfo gameProperty)
-                        {
-                            Settings.Game.PropertyChanged -= Settings_PropertyChanged;
-                            try
-                            {
-                                var newValue = gameProperty.GetValue(editedGame);
-                                var currentValue = property.GetValue(Settings.Game);
-                                if (property.PropertyType == gameProperty.PropertyType
-                                    && !object.Equals(currentValue, newValue))
-                                {
-                                    property.SetValue(Settings.Game, newValue);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.Debug(ex, $"Failed to update property {gameProperty.Name} for {editedGame.Name}.");
-                            }
-                            Settings.Game.PropertyChanged += Settings_PropertyChanged;
-                        }
-                    }
-                }
-            }
+            // Game property synchronization removed - no longer needed
         }
 
         private void AddPropertiesAsResources<T>(object source)
@@ -242,7 +197,9 @@ namespace Extras
                 var settingsType = source.GetType();
                 var properties = settingsType.GetProperties();
                 var typedProperties = properties.Where(p => p.PropertyType == typeof(T));
-                var window = app.Windows.OfType<Window>().FirstOrDefault(w => w.Name == "WindowMain");
+                var window = app
+                    .Windows.OfType<Window>()
+                    .FirstOrDefault(w => w.Name == "WindowMain");
                 foreach (var typedProperty in typedProperties)
                 {
                     try
@@ -263,15 +220,6 @@ namespace Extras
 
         DesktopView lastView;
         IEnumerable<Game> lastSelected;
-
-        public static readonly PropertyInfo[] GameSettingsProperties
-            = typeof(GameProperties)
-            .GetProperties()
-            .ToArray();
-        public static readonly PropertyInfo[] GameProperties = typeof(Game).GetProperties()
-            .Where(p => p.CanRead && p.CanWrite)
-            .Where(p => GameSettingsProperties.Any(o => o.Name == p.Name))
-            .ToArray();
 
         internal Navigation Navigation = new Navigation();
 
@@ -303,20 +251,32 @@ namespace Extras
 
         private void RestoreDefaultThemeIcons()
         {
-            ApplyThemeIcons(Path.Combine(PlayniteApi.Paths.ApplicationPath, "Themes", "Desktop", "Default"));
+            ApplyThemeIcons(
+                Path.Combine(PlayniteApi.Paths.ApplicationPath, "Themes", "Desktop", "Default")
+            );
         }
 
         private void ApplyCurrentThemeIcons()
         {
             var api = PlayniteApi;
-            var destopThemeDirectory = Path.Combine(api.Paths.ConfigurationPath, "Themes", "Desktop");
+            var destopThemeDirectory = Path.Combine(
+                api.Paths.ConfigurationPath,
+                "Themes",
+                "Desktop"
+            );
             if (Directory.Exists(destopThemeDirectory))
             {
                 var themeDirectories = Directory.GetDirectories(destopThemeDirectory);
                 foreach (var themeDirectory in themeDirectories)
                 {
                     var themManifestPath = Path.Combine(themeDirectory, ThemeManifestFileName);
-                    if (File.Exists(themManifestPath) && Serialization.TryFromYamlFile<ThemeManifest>(themManifestPath, out var manifest))
+                    if (
+                        File.Exists(themManifestPath)
+                        && Serialization.TryFromYamlFile<ThemeManifest>(
+                            themManifestPath,
+                            out var manifest
+                        )
+                    )
                     {
                         if (manifest.Id == api.ApplicationSettings.DesktopTheme)
                         {
@@ -337,20 +297,38 @@ namespace Extras
                 {
                     Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
                     Environment.GetFolderPath(Environment.SpecialFolder.Startup),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs),"Playnite"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Microsoft","Internet Explorer", "Quick Launch", "User Pinned", "TaskBar"),
+                    Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+                        "Playnite"
+                    ),
+                    Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "Microsoft",
+                        "Internet Explorer",
+                        "Quick Launch",
+                        "User Pinned",
+                        "TaskBar"
+                    ),
                 };
 
                 var shortcutPaths = shortcutLocations
                     .Where(path => Directory.Exists(path))
-                    .Select(path => Directory.GetFiles(path, "Playnite.lnk", SearchOption.TopDirectoryOnly).FirstOrDefault())
-                    .Where(path => !string.IsNullOrWhiteSpace(path)).ToList();
+                    .Select(path =>
+                        Directory
+                            .GetFiles(path, "Playnite.lnk", SearchOption.TopDirectoryOnly)
+                            .FirstOrDefault()
+                    )
+                    .Where(path => !string.IsNullOrWhiteSpace(path))
+                    .ToList();
 
                 var iconPath = Path.Combine(themeRootPath, "Images", "applogo.ico");
 
                 if (!File.Exists(iconPath))
                 {
-                    iconPath = Path.Combine(PlayniteApi.Paths.ApplicationPath, "Playnite.DesktopApp.exe");
+                    iconPath = Path.Combine(
+                        PlayniteApi.Paths.ApplicationPath,
+                        "Playnite.DesktopApp.exe"
+                    );
                 }
 
                 foreach (var shortcutPath in shortcutPaths)
@@ -390,53 +368,44 @@ namespace Extras
             //    Settings.Menus.OnPropertyChanged(nameof(Menus.EMLGameMenuItems));
             //    Settings.Menus.OnPropertyChanged(nameof(Menus.BackgroundChangerGameMenuItems));
             //}
-            Settings.Game.PropertyChanged -= Settings_PropertyChanged;
             var prevSelected = lastSelected;
             var prevMode = lastView;
             lastSelected = args.NewValue;
             lastView = PlayniteApi.MainView.ActiveDesktopView;
-            if (prevMode != lastView && lastSelected == null && prevSelected != null && Settings.EnableSelectionPreservation)
+            if (
+                prevMode != lastView
+                && lastSelected == null
+                && prevSelected != null
+                && Settings.EnableSelectionPreservation
+            )
             {
                 IEnumerable<Guid> gameIds = prevSelected.Select(g => g.Id);
-                if (!Enumerable.SequenceEqual(PlayniteApi.MainView.SelectedGames?.Select(g => g.Id) ?? Enumerable.Empty<Guid>(), gameIds ?? Enumerable.Empty<Guid>()))
+                if (
+                    !Enumerable.SequenceEqual(
+                        PlayniteApi.MainView.SelectedGames?.Select(g => g.Id)
+                            ?? Enumerable.Empty<Guid>(),
+                        gameIds ?? Enumerable.Empty<Guid>()
+                    )
+                )
                 {
                     try
                     {
                         PlayniteApi.MainView.SelectGames(gameIds);
                     }
-                    catch (Exception)
-                    {
-
-                    }
+                    catch (Exception) { }
                 }
             }
             else
             {
                 LibraryNavigation item = new Models.LibraryNavigation
                 {
-                    SelectedIds = PlayniteApi.MainView.SelectedGames?.Select(g => g.Id).ToList() ?? new List<Guid>(),
-                    DesktopView = PlayniteApi.MainView.ActiveDesktopView
+                    SelectedIds =
+                        PlayniteApi.MainView.SelectedGames?.Select(g => g.Id).ToList()
+                        ?? new List<Guid>(),
+                    DesktopView = PlayniteApi.MainView.ActiveDesktopView,
                 };
                 AddNavigationPointDelayed(item);
             }
-
-            if (args.NewValue?.FirstOrDefault() is Game current)
-            {
-                foreach (var property in GameSettingsProperties)
-                {
-                    if (GameProperties.FirstOrDefault(p => p.Name == property.Name) is PropertyInfo gameProperty)
-                    {
-                        if (property.PropertyType == gameProperty.PropertyType)
-                        {
-                            var newValue = gameProperty.GetValue(current);
-                            var currentValue = property.GetValue(Settings.Game);
-                            if (!object.Equals(currentValue, newValue))
-                                property.SetValue(Settings.Game, newValue);
-                        }
-                    }
-                }
-            }
-            Settings.Game.PropertyChanged += Settings_PropertyChanged;
         }
 
         public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
@@ -459,7 +428,7 @@ namespace Extras
                             game.UserScore = 20;
                             Playnite.SDK.API.Instance.Database.Games.Update(game);
                         }
-                    }
+                    },
                 };
 
                 yield return new GameMenuItem
@@ -476,7 +445,7 @@ namespace Extras
                             game.UserScore = 40;
                             Playnite.SDK.API.Instance.Database.Games.Update(game);
                         }
-                    }
+                    },
                 };
 
                 yield return new GameMenuItem
@@ -493,7 +462,7 @@ namespace Extras
                             game.UserScore = 60;
                             Playnite.SDK.API.Instance.Database.Games.Update(game);
                         }
-                    }
+                    },
                 };
 
                 yield return new GameMenuItem
@@ -510,7 +479,7 @@ namespace Extras
                             game.UserScore = 80;
                             Playnite.SDK.API.Instance.Database.Games.Update(game);
                         }
-                    }
+                    },
                 };
 
                 yield return new GameMenuItem
@@ -527,7 +496,7 @@ namespace Extras
                             game.UserScore = 100;
                             Playnite.SDK.API.Instance.Database.Games.Update(game);
                         }
-                    }
+                    },
                 };
             }
         }
@@ -538,14 +507,16 @@ namespace Extras
             yield return new MainMenuItem()
             {
                 Description = "Test Notification",
-                Action = m => PlayniteApi.Notifications.Add(
-                    new NotificationMessage(
-                        Guid.NewGuid().ToString(),
-                        "Hallo, das ist eine mittellange Benachrichtigung.",
-                        NotificationType.Info,
-                        () => API.Instance.Dialogs.ShowMessage("Hello, I'm a notification."))
+                Action = m =>
+                    PlayniteApi.Notifications.Add(
+                        new NotificationMessage(
+                            Guid.NewGuid().ToString(),
+                            "Hallo, das ist eine mittellange Benachrichtigung.",
+                            NotificationType.Info,
+                            () => API.Instance.Dialogs.ShowMessage("Hello, I'm a notification.")
+                        )
                     ),
-                MenuSection = ""
+                MenuSection = "",
             };
 #endif
             yield return new MainMenuItem()
@@ -554,9 +525,11 @@ namespace Extras
                 Action = m =>
                 {
                     ApplyCurrentThemeIcons();
-                    PlayniteApi.Dialogs.ShowMessage("Theme icon was applied to shortcuts. To update the icon in the taskbar, Playnite needs to be restarted. If Playnite is pinned to the taskbar, it needs to be unpinned and then pinned again, in order for the icon to update.");
+                    PlayniteApi.Dialogs.ShowMessage(
+                        "Theme icon was applied to shortcuts. To update the icon in the taskbar, Playnite needs to be restarted. If Playnite is pinned to the taskbar, it needs to be unpinned and then pinned again, in order for the icon to update."
+                    );
                 },
-                MenuSection = "@ThemeExtras"
+                MenuSection = "@ThemeExtras",
             };
 
             yield return new MainMenuItem()
@@ -565,9 +538,11 @@ namespace Extras
                 Action = m =>
                 {
                     RestoreDefaultThemeIcons();
-                    PlayniteApi.Dialogs.ShowMessage("Shortcut icons were restored. To update the icon in the taskbar, Playnite needs to be restarted. If Playnite is pinned to the taskbar, it needs to be unpinned and then pinned again, in order for the icon to update.");
+                    PlayniteApi.Dialogs.ShowMessage(
+                        "Shortcut icons were restored. To update the icon in the taskbar, Playnite needs to be restarted. If Playnite is pinned to the taskbar, it needs to be unpinned and then pinned again, in order for the icon to update."
+                    );
                 },
-                MenuSection = "@ThemeExtras"
+                MenuSection = "@ThemeExtras",
             };
         }
 
@@ -618,8 +593,10 @@ namespace Extras
             // Reset cache if new platforms are being created or are removed
             PlayniteApi.Database.Platforms.ItemCollectionChanged += (s, changes) =>
             {
-                if (changes.AddedItems?.FirstOrDefault() is Platform
-                || changes.RemovedItems?.FirstOrDefault() is Platform)
+                if (
+                    changes.AddedItems?.FirstOrDefault() is Platform
+                    || changes.RemovedItems?.FirstOrDefault() is Platform
+                )
                 {
                     BannerCache.Reset();
                 }
@@ -628,23 +605,61 @@ namespace Extras
             // Add code to be executed when Playnite is initialized.
             settingsViewModel.Settings.PropertyChanged += Settings_PropertyChanged;
             PlayniteApi.Database.Games.ItemUpdated += Games_ItemUpdated;
-            if (PlayniteApi.ApplicationInfo.Mode == ApplicationMode.Desktop)
+            if (PlayniteApi.ApplicationInfo.Mode == ApplicationMode.Desktop) { }
+            if (
+                Application
+                    .Current.Windows.OfType<Window>()
+                    .FirstOrDefault(w => w.Name == "WindowMain")
+                is Window mainWindow
+            )
             {
+                mainWindow.CommandBindings.Add(
+                    new CommandBinding(
+                        NavigationCommands.BrowseBack,
+                        (s, a) =>
+                        {
+                            NavigateBack();
+                        },
+                        (s, a) =>
+                        {
+                            a.CanExecute = Navigation.CanGoBack;
+                        }
+                    )
+                );
+                mainWindow.CommandBindings.Add(
+                    new CommandBinding(
+                        NavigationCommands.BrowseForward,
+                        (s, a) =>
+                        {
+                            NavigateForward();
+                        },
+                        (s, a) =>
+                        {
+                            a.CanExecute = Navigation.CanGoForward;
+                        }
+                    )
+                );
 
-            }
-            if (Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.Name == "WindowMain") is Window mainWindow)
-            {
-                mainWindow.CommandBindings.Add(new CommandBinding(NavigationCommands.BrowseBack, (s, a) => { NavigateBack(); }, (s, a) => { a.CanExecute = Navigation.CanGoBack; }));
-                mainWindow.CommandBindings.Add(new CommandBinding(NavigationCommands.BrowseForward, (s, a) => { NavigateForward(); }, (s, a) => { a.CanExecute = Navigation.CanGoForward; }));
-
-                if (UiHelper.FindVisualChildren<StackPanel>(mainWindow, "PART_PanelSideBarItems").FirstOrDefault() is StackPanel sp)
+                if (
+                    UiHelper
+                        .FindVisualChildren<StackPanel>(mainWindow, "PART_PanelSideBarItems")
+                        .FirstOrDefault()
+                    is StackPanel sp
+                )
                 {
                     foreach (var bt in sp.Children.OfType<Button>())
                     {
                         if (bt.DataContext is ObservableObject observable)
                         {
                             observable.PropertyChanged += SidebarItemChanged;
-                            if (TryGetSidebarItemProperties(observable, out var selected, out _, out _) && selected)
+                            if (
+                                TryGetSidebarItemProperties(
+                                    observable,
+                                    out var selected,
+                                    out _,
+                                    out _
+                                ) && selected
+                            )
                             {
                                 librarySidebarWrapper = observable;
                             }
@@ -664,20 +679,26 @@ namespace Extras
 
         private object librarySidebarWrapper = null;
 
-        private void SidebarItemChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void SidebarItemChanged(
+            object sender,
+            System.ComponentModel.PropertyChangedEventArgs e
+        )
         {
             if (e.PropertyName == "Selected")
             {
                 if (sender == librarySidebarWrapper && PlayniteApi?.MainView != null)
                 {
-                    AddNavigationPointDelayed(new LibraryNavigation
-                    {
-                        DesktopView = PlayniteApi.MainView.ActiveDesktopView,
-                        SelectedIds = PlayniteApi.MainView.SelectedGames?
-                            .OfType<Game>()
-                            .Select(g => g.Id)
-                            .ToList() ?? new List<Guid>(),
-                    });
+                    AddNavigationPointDelayed(
+                        new LibraryNavigation
+                        {
+                            DesktopView = PlayniteApi.MainView.ActiveDesktopView,
+                            SelectedIds =
+                                PlayniteApi
+                                    .MainView.SelectedGames?.OfType<Game>()
+                                    .Select(g => g.Id)
+                                    .ToList() ?? new List<Guid>(),
+                        }
+                    );
                 }
                 else
                 {
@@ -688,11 +709,20 @@ namespace Extras
 
         private void AddViewNavigationPoint(object sender)
         {
-            if (TryGetSidebarItemProperties(sender, out var selectedProperty, out var commandProperty, out var title))
+            if (
+                TryGetSidebarItemProperties(
+                    sender,
+                    out var selectedProperty,
+                    out var commandProperty,
+                    out var title
+                )
+            )
             {
                 if (selectedProperty && commandProperty is ICommand command)
                 {
-                    AddNavigationPointDelayed(new ViewNavigation { ActivationCommand = command, Title = title });
+                    AddNavigationPointDelayed(
+                        new ViewNavigation { ActivationCommand = command, Title = title }
+                    );
                 }
             }
         }
@@ -719,11 +749,18 @@ namespace Extras
             timer.Start();
         }
 
-        private static bool TryGetSidebarItemProperties(object sender, out bool selected, out ICommand command, out string title)
+        private static bool TryGetSidebarItemProperties(
+            object sender,
+            out bool selected,
+            out ICommand command,
+            out string title
+        )
         {
             title = "";
-            if (sender.GetType().GetProperty("Selected") is PropertyInfo _selectedProperty
-                                            && sender.GetType().GetProperty("Command") is PropertyInfo _commandProperty)
+            if (
+                sender.GetType().GetProperty("Selected") is PropertyInfo _selectedProperty
+                && sender.GetType().GetProperty("Command") is PropertyInfo _commandProperty
+            )
             {
                 selected = _selectedProperty.GetValue(sender) as bool? ?? false;
                 command = _commandProperty.GetValue(sender) as ICommand;
@@ -742,15 +779,24 @@ namespace Extras
         {
             if (!Application.Current.Resources.Contains("Extras_FilledStarBrush"))
             {
-                Application.Current.Resources.Add("Extras_FilledStarBrush", new SolidColorBrush(Colors.White));
+                Application.Current.Resources.Add(
+                    "Extras_FilledStarBrush",
+                    new SolidColorBrush(Colors.White)
+                );
             }
             if (!Application.Current.Resources.Contains("Extras_EmptyStarBrush"))
             {
-                Application.Current.Resources.Add("Extras_EmptyStarBrush", new SolidColorBrush(Colors.White) { Opacity = 0.3 });
+                Application.Current.Resources.Add(
+                    "Extras_EmptyStarBrush",
+                    new SolidColorBrush(Colors.White) { Opacity = 0.3 }
+                );
             }
             if (!Application.Current.Resources.Contains("Extras_CompletionTextColor"))
             {
-                Application.Current.Resources.Add("Extras_CompletionTextColor", new SolidColorBrush(Colors.White) { Opacity = 1 });
+                Application.Current.Resources.Add(
+                    "Extras_CompletionTextColor",
+                    new SolidColorBrush(Colors.White) { Opacity = 1 }
+                );
             }
             string name = args.Name;
             if (name.EndsWith("1") || name.EndsWith("2"))
@@ -765,15 +811,31 @@ namespace Extras
             switch (name)
             {
                 case SettableCompletionStatus:
-                    return new Controls.StylableUserControl(new ViewModels.CompletionStatusViewModel());
+                    return new Controls.StylableUserControl(
+                        new ViewModels.CompletionStatusViewModel()
+                    );
                 case CompletionStatusComboBox:
-                    return new Controls.CompletionStatus(new ViewModels.CompletionStatusViewModel());
+                    return new Controls.CompletionStatus(
+                        new ViewModels.CompletionStatusViewModel()
+                    );
                 case SettableFavorite:
                     return new Controls.StylableUserControl(new ViewModels.FavoriteViewModel());
                 case SettableHidden:
-                    return new Controls.StylableUserControl(new ViewModels.GamePropertyViewModel<bool>(nameof(Game.Hidden), g => g.Hidden, (g, v) => g.Hidden = v));
+                    return new Controls.StylableUserControl(
+                        new ViewModels.GamePropertyViewModel<bool>(
+                            nameof(Game.Hidden),
+                            g => g.Hidden,
+                            (g, v) => g.Hidden = v
+                        )
+                    );
                 case SettableUserScore:
-                    return new Controls.StylableUserControl(new ViewModels.GamePropertyViewModel<int?>(nameof(Game.UserScore), g => g.UserScore, (g, v) => g.UserScore = v));
+                    return new Controls.StylableUserControl(
+                        new ViewModels.GamePropertyViewModel<int?>(
+                            nameof(Game.UserScore),
+                            g => g.UserScore,
+                            (g, v) => g.UserScore = v
+                        )
+                    );
                 case UserRatingElement:
                     return new Controls.UserRating();
                 case CommunityRatingElement:
@@ -820,7 +882,10 @@ namespace Extras
                 Settings.PersistentResources[CurrentTheme.Id] = CurrentTheme.GetResources();
             }
 
-            if (Settings.ApplyThemeIconOnChange && Settings.LastThemeId != PlayniteApi.ApplicationSettings.DesktopTheme)
+            if (
+                Settings.ApplyThemeIconOnChange
+                && Settings.LastThemeId != PlayniteApi.ApplicationSettings.DesktopTheme
+            )
             {
                 ApplyCurrentThemeIcons();
             }
