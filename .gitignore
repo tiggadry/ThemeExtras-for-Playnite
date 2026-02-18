@@ -362,3 +362,10 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /.vscode
+
+# dotnet tools config
+dotnet.tools.json
+# .github (ignore GitHub config folder)
+.github/
+# memory-bank (memoriPilot extension helper folder)
+memory-bank/
