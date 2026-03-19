@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 using Playnite.SDK;
 using Playnite.SDK.Data;
@@ -964,7 +965,7 @@ namespace Extras
                             return;
                         }
 
-                        var screenshotPaths = GetScreenshotPathsFromConfig(game);
+                        var screenshotPaths = GetOpenableScreenshotPaths(game);
 
                         if (screenshotPaths.Any())
                         {
@@ -981,7 +982,7 @@ namespace Extras
                             if (openedCount == 0)
                             {
                                 API.Instance.Dialogs.ShowMessage(
-                                    $"Screenshot paths found in config for '{game.Name}', but none of the directories exist:\n"
+                                    $"Screenshot folders found for '{game.Name}', but none contain matching files:\n"
                                         + string.Join("\n", screenshotPaths)
                                 );
                             }
@@ -1009,21 +1010,11 @@ namespace Extras
                     if (!HasScreenshotsVisualizerPlugin())
                         return false;
 
-                    var screenshotPaths = GetScreenshotPathsFromConfig(game);
+                    var screenshotPaths = GetOpenableScreenshotPaths(game);
                     if (!screenshotPaths?.Any() == true)
                         return false;
 
-                    return screenshotPaths.Any(path =>
-                    {
-                        try
-                        {
-                            return Directory.Exists(path);
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
+                    return true;
                 }
             );
 
@@ -1650,10 +1641,27 @@ namespace Extras
             }
         }
 
-        // Simple helper to get screenshot paths from ScreenshotsVisualizer config
-        private static List<string> GetScreenshotPathsFromConfig(Game game)
+        private sealed class ScreenshotFolderCandidate
         {
-            var screenshotPaths = new List<string>();
+            public string Path { get; set; }
+            public bool UseFilePattern { get; set; }
+            public string FilePattern { get; set; }
+            public bool ScanSubFolders { get; set; }
+        }
+
+        private static List<string> GetOpenableScreenshotPaths(Game game)
+        {
+            return GetScreenshotFolderCandidatesFromConfig(game)
+                .Where(candidate => CandidateHasMatchingScreenshots(candidate, game))
+                .Select(candidate => candidate.Path)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        // Helper to get screenshot folder candidates from ScreenshotsVisualizer config.
+        private static List<ScreenshotFolderCandidate> GetScreenshotFolderCandidatesFromConfig(Game game)
+        {
+            var candidates = new List<ScreenshotFolderCandidate>();
 
             try
             {
@@ -1687,7 +1695,7 @@ namespace Extras
 
                         if (gamesArray == null)
                         {
-                            return AddPlayniteScreenshotFolders(game, screenshotPaths);
+                            return AddPlayniteScreenshotFolders(game, candidates);
                         }
                     }
                     else if (configJson is JArray directArray)
@@ -1696,7 +1704,7 @@ namespace Extras
                     }
                     else
                     {
-                        return AddPlayniteScreenshotFolders(game, screenshotPaths);
+                        return AddPlayniteScreenshotFolders(game, candidates);
                     }
 
                     var gameData = gamesArray
@@ -1717,7 +1725,46 @@ namespace Extras
                                 var screenshotsFolder = folderObj["ScreenshotsFolder"]?.ToString();
                                 if (!string.IsNullOrEmpty(screenshotsFolder))
                                 {
-                                    screenshotPaths.Add(screenshotsFolder);
+                                    var usedFilePattern =
+                                        folderObj["UsedFilePattern"]?.Value<bool>() ?? false;
+                                    var filePattern = folderObj["FilePattern"]?.ToString();
+                                    var scanSubFolders =
+                                        folderObj["ScanSubFolders"]?.Value<bool>() ?? false;
+
+                                    foreach (
+                                        var resolvedPath in ResolveScreenshotFolderCandidates(
+                                            screenshotsFolder,
+                                            game
+                                        )
+                                    )
+                                    {
+                                        if (
+                                            !candidates.Any(candidate =>
+                                                candidate.Path.Equals(
+                                                    resolvedPath,
+                                                    StringComparison.OrdinalIgnoreCase
+                                                )
+                                                && candidate.UseFilePattern == usedFilePattern
+                                                && candidate.ScanSubFolders == scanSubFolders
+                                                && string.Equals(
+                                                    candidate.FilePattern,
+                                                    filePattern,
+                                                    StringComparison.OrdinalIgnoreCase
+                                                )
+                                            )
+                                        )
+                                        {
+                                            candidates.Add(
+                                                new ScreenshotFolderCandidate
+                                                {
+                                                    Path = resolvedPath,
+                                                    UseFilePattern = usedFilePattern,
+                                                    FilePattern = filePattern,
+                                                    ScanSubFolders = scanSubFolders,
+                                                }
+                                            );
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1729,27 +1776,376 @@ namespace Extras
                 ThemeExtras.logger.Error(ex, "Error reading ScreenshotsVisualizer config");
             }
 
-            return AddPlayniteScreenshotFolders(game, screenshotPaths);
+            return AddPlayniteScreenshotFolders(game, candidates);
         }
 
-        private static List<string> AddPlayniteScreenshotFolders(
+        private static bool CandidateHasMatchingScreenshots(
+            ScreenshotFolderCandidate candidate,
+            Game game
+        )
+        {
+            if (candidate == null || string.IsNullOrWhiteSpace(candidate.Path))
+            {
+                return false;
+            }
+
+            if (!Directory.Exists(candidate.Path))
+            {
+                return false;
+            }
+
+            if (!candidate.UseFilePattern || string.IsNullOrWhiteSpace(candidate.FilePattern))
+            {
+                return true;
+            }
+
+            var searchOption = candidate.ScanSubFolders
+                ? SearchOption.AllDirectories
+                : SearchOption.TopDirectoryOnly;
+
+            foreach (var pattern in ResolveScreenshotFilePatterns(candidate.FilePattern, game))
+            {
+                try
+                {
+                    if (Directory.EnumerateFiles(candidate.Path, pattern, searchOption).Any())
+                    {
+                        return true;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<string> ResolveScreenshotFilePatterns(string pattern, Game game)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            var gameName = game?.Name ?? string.Empty;
+            var gameId = game != null ? game.Id.ToString() : string.Empty;
+            var nameVariants = GetGameNameCandidates(gameName);
+
+            var resolvedPatterns = ExpandScreenshotsTemplateTokens(pattern)
+                .SelectMany(template =>
+                    nameVariants.Select(name =>
+                    {
+                        var resolved = ReplaceScreenshotsFolderTokens(template, name, gameId);
+                        resolved = Regex.Replace(resolved, "\\{[^}]+\\}", "*");
+                        resolved = Environment.ExpandEnvironmentVariables(resolved).Trim();
+
+                        if (resolved.Contains("\\") || resolved.Contains("/"))
+                        {
+                            resolved = Path.GetFileName(resolved);
+                        }
+
+                        if (string.IsNullOrWhiteSpace(resolved))
+                        {
+                            resolved = "*";
+                        }
+
+                        while (resolved.Contains("**"))
+                        {
+                            resolved = resolved.Replace("**", "*");
+                        }
+
+                        return resolved;
+                    })
+                )
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (resolvedPatterns.Any())
+            {
+                return resolvedPatterns;
+            }
+
+            return new List<string> { "*" };
+        }
+
+        private static IEnumerable<string> ResolveScreenshotFolderCandidates(
+            string folderTemplate,
+            Game game
+        )
+        {
+            if (string.IsNullOrWhiteSpace(folderTemplate))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            var gameName = game?.Name ?? string.Empty;
+            var gameId = game != null ? game.Id.ToString() : string.Empty;
+            var nameVariants = GetGameNameCandidates(gameName).ToList();
+
+            var candidates = ExpandScreenshotsTemplateTokens(folderTemplate)
+                .Select(template => Environment.ExpandEnvironmentVariables(template).Trim())
+                .SelectMany(expandedTemplate =>
+                    nameVariants
+                        .Select(name =>
+                            ReplaceScreenshotsFolderTokens(expandedTemplate, name, gameId)
+                        )
+                        .Concat(new[] { expandedTemplate })
+                )
+                .ToList();
+
+            return candidates
+                .SelectMany(ResolveAbsoluteAndRelativeScreenshotPaths)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static IEnumerable<string> GetGameNameCandidates(string gameName)
+        {
+            if (string.IsNullOrWhiteSpace(gameName))
+            {
+                return new[] { string.Empty };
+            }
+
+            var candidates = new List<string>
+            {
+                gameName,
+                SanitizePathSegment(gameName, '_'),
+                SanitizePathSegment(gameName, ' '),
+                SanitizePathSegment(gameName, null),
+            };
+
+            return candidates
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => Regex.Replace(value.Trim(), "\\s{2,}", " "))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static IEnumerable<string> ExpandScreenshotsTemplateTokens(string template)
+        {
+            if (string.IsNullOrWhiteSpace(template))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            var systemDrive = GetSystemDrivePath();
+            var withSystemDrive = Regex.Replace(
+                template,
+                "\\{\\s*SystemDrive\\s*\\}",
+                _ => systemDrive,
+                RegexOptions.IgnoreCase
+            );
+
+            if (Regex.IsMatch(withSystemDrive, "\\{\\s*SteamInstallDir\\s*\\}", RegexOptions.IgnoreCase))
+            {
+                return GetSteamInstallDirCandidates()
+                    .Select(steamPath =>
+                        Regex.Replace(
+                            withSystemDrive,
+                            "\\{\\s*SteamInstallDir\\s*\\}",
+                            _ => steamPath,
+                            RegexOptions.IgnoreCase
+                        )
+                    )
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return new[] { withSystemDrive };
+        }
+
+        private static string GetSystemDrivePath()
+        {
+            var systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+            if (!string.IsNullOrWhiteSpace(systemDrive))
+            {
+                return systemDrive.TrimEnd('\\');
+            }
+
+            var root = Path.GetPathRoot(Environment.SystemDirectory);
+            return string.IsNullOrWhiteSpace(root) ? "C:" : root.TrimEnd('\\');
+        }
+
+        private static IEnumerable<string> GetSteamInstallDirCandidates()
+        {
+            var candidates = new List<string>();
+
+            AddSteamPathFromRegistry(candidates, Registry.CurrentUser, @"Software\Valve\Steam", "SteamPath");
+            AddSteamPathFromRegistry(candidates, Registry.LocalMachine, @"SOFTWARE\Valve\Steam", "InstallPath");
+            AddSteamPathFromRegistry(
+                candidates,
+                Registry.LocalMachine,
+                @"SOFTWARE\WOW6432Node\Valve\Steam",
+                "InstallPath"
+            );
+
+            var systemDrive = GetSystemDrivePath();
+            candidates.Add(systemDrive + "\\Steam");
+            candidates.Add(systemDrive + "\\Program Files (x86)\\Steam");
+
+            return candidates
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path.Trim().TrimEnd('\\'))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static void AddSteamPathFromRegistry(
+            List<string> paths,
+            RegistryKey root,
+            string subKey,
+            string valueName
+        )
+        {
+            try
+            {
+                using (var key = root.OpenSubKey(subKey))
+                {
+                    var value = key?.GetValue(valueName) as string;
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        paths.Add(value);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private static IEnumerable<string> ResolveAbsoluteAndRelativeScreenshotPaths(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            var trimmedPath = path.Trim().Trim('"');
+            var paths = new List<string>();
+
+            if (Path.IsPathRooted(trimmedPath))
+            {
+                paths.Add(trimmedPath);
+            }
+            else
+            {
+                var apiPaths = API.Instance?.Paths;
+                if (!string.IsNullOrWhiteSpace(apiPaths?.ConfigurationPath))
+                {
+                    paths.Add(Path.Combine(apiPaths.ConfigurationPath, trimmedPath));
+                }
+
+                if (!string.IsNullOrWhiteSpace(apiPaths?.ApplicationPath))
+                {
+                    paths.Add(Path.Combine(apiPaths.ApplicationPath, trimmedPath));
+                }
+
+                // Keep the original relative value as the last fallback.
+                paths.Add(trimmedPath);
+            }
+
+            return paths
+                .SelectMany(GetPathVariants)
+                .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+                .Select(candidate => candidate.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static IEnumerable<string> GetPathVariants(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            var variants = new List<string> { path };
+
+            try
+            {
+                var directory = string.Empty;
+                var fileName = path;
+
+                var lastBackslash = path.LastIndexOf('\\');
+                var lastSlash = path.LastIndexOf('/');
+                var splitIndex = Math.Max(lastBackslash, lastSlash);
+
+                if (splitIndex >= 0)
+                {
+                    directory = path.Substring(0, splitIndex);
+                    fileName = path.Substring(splitIndex + 1);
+                }
+
+                if (!string.IsNullOrWhiteSpace(fileName))
+                {
+                    foreach (var nameVariant in GetGameNameCandidates(fileName))
+                    {
+                        if (string.IsNullOrWhiteSpace(directory))
+                        {
+                            variants.Add(nameVariant);
+                        }
+                        else
+                        {
+                            variants.Add(Path.Combine(directory, nameVariant));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return variants
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string ReplaceScreenshotsFolderTokens(
+            string folderTemplate,
+            string gameName,
+            string gameId
+        )
+        {
+            var resolved = folderTemplate;
+
+            resolved = Regex.Replace(
+                resolved,
+                "\\{\\s*Name\\s*\\}",
+                _ => gameName ?? string.Empty,
+                RegexOptions.IgnoreCase
+            );
+            resolved = Regex.Replace(
+                resolved,
+                "\\{\\s*(Id|GameId)\\s*\\}",
+                _ => gameId ?? string.Empty,
+                RegexOptions.IgnoreCase
+            );
+
+            return resolved;
+        }
+
+        private static List<ScreenshotFolderCandidate> AddPlayniteScreenshotFolders(
             Game game,
-            List<string> screenshotPaths
+            List<ScreenshotFolderCandidate> candidates
         )
         {
             foreach (var path in GetPlayniteScreenshotFolders(game))
             {
                 if (
-                    !screenshotPaths.Any(p =>
-                        p.Equals(path, StringComparison.OrdinalIgnoreCase)
+                    !candidates.Any(candidate =>
+                        candidate.Path.Equals(path, StringComparison.OrdinalIgnoreCase)
                     )
                 )
                 {
-                    screenshotPaths.Add(path);
+                    candidates.Add(
+                        new ScreenshotFolderCandidate
+                        {
+                            Path = path,
+                            UseFilePattern = false,
+                            FilePattern = null,
+                            ScanSubFolders = false,
+                        }
+                    );
                 }
             }
 
-            return screenshotPaths;
+            return candidates;
         }
 
         private static IEnumerable<string> GetPlayniteScreenshotFolders(Game game)
@@ -1814,8 +2210,7 @@ namespace Extras
             var nameCandidates = new List<string>();
             if (!string.IsNullOrWhiteSpace(game?.Name))
             {
-                nameCandidates.Add(game.Name);
-                nameCandidates.Add(SanitizePathSegment(game.Name));
+                nameCandidates.AddRange(GetGameNameCandidates(game.Name));
             }
 
             if (game != null)
@@ -1836,7 +2231,7 @@ namespace Extras
             }
         }
 
-        private static string SanitizePathSegment(string value)
+        private static string SanitizePathSegment(string value, char? replacement = '_')
         {
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -1849,10 +2244,21 @@ namespace Extras
             for (int i = 0; i < value.Length; i++)
             {
                 var ch = value[i];
-                buffer[i] = invalidChars.Contains(ch) ? '_' : ch;
+                if (invalidChars.Contains(ch))
+                {
+                    buffer[i] = replacement ?? '\0';
+                }
+                else
+                {
+                    buffer[i] = ch;
+                }
             }
 
-            return new string(buffer);
+            var sanitized = replacement == null
+                ? new string(buffer.Where(ch => ch != '\0').ToArray())
+                : new string(buffer);
+
+            return sanitized.Trim();
         }
 
         // Helper metoda pro kontrolu skutečné existence save/config složek na disku
