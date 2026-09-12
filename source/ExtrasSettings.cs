@@ -340,56 +340,6 @@ namespace Extras
             }
         }
 
-        public IEnumerable<object> UniPlaySongGameMenuItems
-        {
-            get
-            {
-                var api = API.Instance;
-                var id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-                if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
-                    if (
-                        api.Addons?.Plugins?.FirstOrDefault(p =>
-                            string.Equals(
-                                p.Id.ToString(),
-                                id,
-                                System.StringComparison.InvariantCultureIgnoreCase
-                            )
-                        )
-                        is Plugin plugin
-                    )
-                    {
-                        try
-                        {
-                            var items = CreateGameMenuItems(api, plugin);
-                            var settingsItem = new MenuItem
-                            {
-                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
-                                Command = ThemeExtras
-                                    .Instance
-                                    .Settings
-                                    .Commands
-                                    .OpenPluginSettingsCommand,
-                                CommandParameter = id,
-                            };
-                            if (items.Count > 0)
-                            {
-                                items.Insert(0, new Separator());
-                            }
-                            items.Insert(0, settingsItem);
-                            return items;
-                        }
-                        catch (System.Exception ex)
-                        {
-                            ThemeExtras.logger.Error(
-                                ex,
-                                $"Failed to create UniPlaySong menu items."
-                            );
-                        }
-                    }
-                return null;
-            }
-        }
-
         public IEnumerable<object> ScreenshotsVisualizerGameMenuItems
         {
             get
@@ -433,6 +383,56 @@ namespace Extras
                             ThemeExtras.logger.Error(
                                 ex,
                                 $"Failed to create ScreenshotsVisualizer menu items."
+                            );
+                        }
+                    }
+                return null;
+            }
+        }
+
+        public IEnumerable<object> UniPlaySongGameMenuItems
+        {
+            get
+            {
+                var api = API.Instance;
+                var id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+                if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
+                    {
+                        try
+                        {
+                            var items = CreateGameMenuItems(api, plugin);
+                            var settingsItem = new MenuItem
+                            {
+                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
+                                Command = ThemeExtras
+                                    .Instance
+                                    .Settings
+                                    .Commands
+                                    .OpenPluginSettingsCommand,
+                                CommandParameter = id,
+                            };
+                            if (items.Count > 0)
+                            {
+                                items.Insert(0, new Separator());
+                            }
+                            items.Insert(0, settingsItem);
+                            return items;
+                        }
+                        catch (System.Exception ex)
+                        {
+                            ThemeExtras.logger.Error(
+                                ex,
+                                $"Failed to create UniPlaySong menu items."
                             );
                         }
                     }
@@ -965,27 +965,16 @@ namespace Extras
                             return;
                         }
 
-                        var screenshotPaths = GetOpenableScreenshotPaths(game);
-
-                        if (screenshotPaths.Any())
+                        var openScreenshotsItem = GetScreenshotsVisualizerOpenFolderMenuItem(game);
+                        if (openScreenshotsItem != null)
                         {
-                            int openedCount = 0;
-                            foreach (var path in screenshotPaths)
-                            {
-                                if (Directory.Exists(path))
+                            openScreenshotsItem.Action(
+                                new GameMenuItemActionArgs
                                 {
-                                    System.Diagnostics.Process.Start("explorer.exe", $"\"{path}\"");
-                                    openedCount++;
+                                    Games = new List<Game> { game },
+                                    SourceItem = openScreenshotsItem,
                                 }
-                            }
-
-                            if (openedCount == 0)
-                            {
-                                API.Instance.Dialogs.ShowMessage(
-                                    $"Screenshot folders found for '{game.Name}', but none contain matching files:\n"
-                                        + string.Join("\n", screenshotPaths)
-                                );
-                            }
+                            );
                         }
                         else
                         {
@@ -1007,16 +996,41 @@ namespace Extras
                     if (game == null)
                         return false;
 
-                    if (!HasScreenshotsVisualizerPlugin())
-                        return false;
-
-                    var screenshotPaths = GetOpenableScreenshotPaths(game);
-                    if (!screenshotPaths?.Any() == true)
-                        return false;
-
-                    return true;
+                    return GetScreenshotsVisualizerOpenFolderMenuItem(game) != null;
                 }
             );
+
+        private static GameMenuItem GetScreenshotsVisualizerOpenFolderMenuItem(Game game)
+        {
+            if (game == null || !HasScreenshotsVisualizerPlugin())
+                return null;
+
+            var plugin = API.Instance.Addons?.Plugins?.FirstOrDefault(p =>
+                p.Id.ToString()
+                    .Equals(
+                        "c6c8276f-91bf-48e5-a1d1-4bee0b493488",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+            );
+            if (plugin == null)
+                return null;
+
+            var openFolderDescription = ResourceProvider.GetString(
+                "LOCSsvOpenScreenshotsDirectory"
+            );
+            if (string.IsNullOrWhiteSpace(openFolderDescription))
+                return null;
+
+            return plugin
+                .GetGameMenuItems(new GetGameMenuItemsArgs { Games = new List<Game> { game } })
+                .FirstOrDefault(item =>
+                    string.Equals(
+                        item.Description,
+                        openFolderDescription,
+                        StringComparison.Ordinal
+                    )
+                );
+        }
 
         public ICommand OpenGameInstallLocationCommand { get; } =
             new RelayCommand<object>(
@@ -1633,7 +1647,8 @@ namespace Extras
                                 "c6c8276f-91bf-48e5-a1d1-4bee0b493488",
                                 StringComparison.OrdinalIgnoreCase
                             ) || p.GetType().Name.ToLower().Contains("screenshotsvisualizer")
-                    ) ?? false;
+                    )
+                    ?? false;
             }
             catch
             {
