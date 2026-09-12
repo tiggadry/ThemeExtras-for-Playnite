@@ -1659,7 +1659,9 @@ namespace Extras
         }
 
         // Helper to get screenshot folder candidates from ScreenshotsVisualizer config.
-        private static List<ScreenshotFolderCandidate> GetScreenshotFolderCandidatesFromConfig(Game game)
+        private static List<ScreenshotFolderCandidate> GetScreenshotFolderCandidatesFromConfig(
+            Game game
+        )
         {
             var candidates = new List<ScreenshotFolderCandidate>();
 
@@ -1812,9 +1814,7 @@ namespace Extras
                         return true;
                     }
                 }
-                catch
-                {
-                }
+                catch { }
             }
 
             return false;
@@ -1935,7 +1935,13 @@ namespace Extras
                 RegexOptions.IgnoreCase
             );
 
-            if (Regex.IsMatch(withSystemDrive, "\\{\\s*SteamInstallDir\\s*\\}", RegexOptions.IgnoreCase))
+            if (
+                Regex.IsMatch(
+                    withSystemDrive,
+                    "\\{\\s*SteamInstallDir\\s*\\}",
+                    RegexOptions.IgnoreCase
+                )
+            )
             {
                 return GetSteamInstallDirCandidates()
                     .Select(steamPath =>
@@ -1968,8 +1974,18 @@ namespace Extras
         {
             var candidates = new List<string>();
 
-            AddSteamPathFromRegistry(candidates, Registry.CurrentUser, @"Software\Valve\Steam", "SteamPath");
-            AddSteamPathFromRegistry(candidates, Registry.LocalMachine, @"SOFTWARE\Valve\Steam", "InstallPath");
+            AddSteamPathFromRegistry(
+                candidates,
+                Registry.CurrentUser,
+                @"Software\Valve\Steam",
+                "SteamPath"
+            );
+            AddSteamPathFromRegistry(
+                candidates,
+                Registry.LocalMachine,
+                @"SOFTWARE\Valve\Steam",
+                "InstallPath"
+            );
             AddSteamPathFromRegistry(
                 candidates,
                 Registry.LocalMachine,
@@ -2005,9 +2021,7 @@ namespace Extras
                     }
                 }
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         private static IEnumerable<string> ResolveAbsoluteAndRelativeScreenshotPaths(string path)
@@ -2087,9 +2101,7 @@ namespace Extras
                     }
                 }
             }
-            catch
-            {
-            }
+            catch { }
 
             return variants
                 .Where(value => !string.IsNullOrWhiteSpace(value))
@@ -2154,10 +2166,7 @@ namespace Extras
 
             try
             {
-                var configPath = Path.Combine(
-                    API.Instance.Paths.ConfigurationPath,
-                    "config.json"
-                );
+                var configPath = Path.Combine(API.Instance.Paths.ConfigurationPath, "config.json");
 
                 if (File.Exists(configPath))
                 {
@@ -2171,10 +2180,8 @@ namespace Extras
                         )
                         {
                             if (
-                                prop.Name.IndexOf(
-                                    "screenshot",
-                                    StringComparison.OrdinalIgnoreCase
-                                ) < 0
+                                prop.Name.IndexOf("screenshot", StringComparison.OrdinalIgnoreCase)
+                                < 0
                             )
                             {
                                 continue;
@@ -2254,9 +2261,10 @@ namespace Extras
                 }
             }
 
-            var sanitized = replacement == null
-                ? new string(buffer.Where(ch => ch != '\0').ToArray())
-                : new string(buffer);
+            var sanitized =
+                replacement == null
+                    ? new string(buffer.Where(ch => ch != '\0').ToArray())
+                    : new string(buffer);
 
             return sanitized.Trim();
         }
