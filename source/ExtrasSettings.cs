@@ -2364,6 +2364,10 @@ namespace Extras
                     Environment.SpecialFolder.SystemX86
                 ),
                 [@"<code>"] = @"*",
+                [@"<user-id>"] = @"*",
+                [@"%USERPROFILE%"] = Environment.GetFolderPath(
+                    Environment.SpecialFolder.UserProfile
+                ),
             };
 
             try
@@ -2441,7 +2445,37 @@ namespace Extras
                 }
                 else
                 {
-                    foreach (var matchingPath in GetAllMatchingPaths(pathDef))
+                    var matchingPaths = GetAllMatchingPaths(pathDef).ToList();
+                    if (matchingPaths.Count == 0)
+                    {
+                        var wildcardIndex = pathDef.IndexOfAny(new[] { '*', '?' });
+                        var wildcardSegmentEnd = pathDef.IndexOfAny(
+                            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                            wildcardIndex
+                        );
+                        if (wildcardIndex >= 0 && wildcardSegmentEnd >= 0)
+                        {
+                            var wildcardDirectory = pathDef
+                                .Substring(0, pathDef.LastIndexOfAny(
+                                    new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                                    wildcardIndex
+                                ))
+                                .TrimEnd(
+                                    Path.DirectorySeparatorChar,
+                                    Path.AltDirectorySeparatorChar
+                                );
+                            var fallbackPath = Path.Combine(
+                                wildcardDirectory,
+                                pathDef.Substring(wildcardSegmentEnd + 1)
+                            );
+                            if (File.Exists(fallbackPath) || Directory.Exists(fallbackPath))
+                            {
+                                matchingPaths.Add(fallbackPath);
+                            }
+                        }
+                    }
+
+                    foreach (var matchingPath in matchingPaths)
                     {
                         if (!string.IsNullOrEmpty(matchingPath))
                         {
