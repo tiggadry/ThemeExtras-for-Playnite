@@ -267,7 +267,7 @@ namespace Extras
                             }
                         }
                     }
-                    foreach(var file in timestamps.Keys)
+                    foreach (var file in timestamps.Keys.ToList())
                     {
                         var sourcePath = Path.Combine(RootPath, file);
                         var targetPath = Path.Combine(BackupPath, file);
@@ -278,7 +278,9 @@ namespace Extras
                             {
                                 File.Delete(targetPath);
                             }
-                            File.Create(deleteFilePath);
+                            using (File.Create(deleteFilePath))
+                            {
+                            }
                             timestamps[file] = File.GetLastWriteTime(deleteFilePath);
                             anyBackups = true;
                         }
