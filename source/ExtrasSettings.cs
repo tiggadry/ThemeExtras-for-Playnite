@@ -236,6 +236,7 @@ namespace Extras
                     OnPropertyChanged(nameof(BackgroundChangerGameMenuItems));
                     OnPropertyChanged(nameof(UniPlaySongGameMenuItems));
                     OnPropertyChanged(nameof(ScreenshotsVisualizerGameMenuItems));
+                    OnPropertyChanged(nameof(ScreenshotUtilitiesGameMenuItems));
                 }
             }
         }
@@ -383,6 +384,56 @@ namespace Extras
                             ThemeExtras.logger.Error(
                                 ex,
                                 $"Failed to create ScreenshotsVisualizer menu items."
+                            );
+                        }
+                    }
+                return null;
+            }
+        }
+
+        public IEnumerable<object> ScreenshotUtilitiesGameMenuItems
+        {
+            get
+            {
+                var api = API.Instance;
+                var id = "485d682f-73e9-4d54-b16f-b8dd49e88f90";
+                if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
+                    {
+                        try
+                        {
+                            var items = CreateGameMenuItems(api, plugin);
+                            var settingsItem = new MenuItem
+                            {
+                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
+                                Command = ThemeExtras
+                                    .Instance
+                                    .Settings
+                                    .Commands
+                                    .OpenPluginSettingsCommand,
+                                CommandParameter = id,
+                            };
+                            if (items.Count > 0)
+                            {
+                                items.Insert(0, new Separator());
+                            }
+                            items.Insert(0, settingsItem);
+                            return items;
+                        }
+                        catch (System.Exception ex)
+                        {
+                            ThemeExtras.logger.Error(
+                                ex,
+                                $"Failed to create ScreenshotUtilities menu items."
                             );
                         }
                     }
