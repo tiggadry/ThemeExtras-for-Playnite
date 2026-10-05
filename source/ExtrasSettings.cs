@@ -605,6 +605,11 @@ namespace Extras
     {
         public static readonly CommandSettings Instance = new CommandSettings();
 
+        private static readonly HashSet<string> ImageRotaterArtworkExtensions = new HashSet<string>(
+            new[] { ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif", ".mp4", ".webm" },
+            StringComparer.OrdinalIgnoreCase
+        );
+
         // Cache pro SaveFileView plugin výsledky
         private static readonly Dictionary<
             string,
@@ -839,6 +844,105 @@ namespace Extras
             // Fallback to selected game
             return API.Instance?.MainView?.SelectedGames?.FirstOrDefault();
         }
+
+        private static string GetImageRotaterGameFolder(Game game, string artworkType)
+        {
+            return Path.Combine(
+                API.Instance.Paths.ConfigurationPath,
+                "ExtensionsData",
+                "72b7d457-0621-429b-8368-665bc53ff896",
+                "Images",
+                game.Id.ToString(),
+                artworkType
+            );
+        }
+
+        private static bool HasImageRotaterArtwork(Game game, string artworkType)
+        {
+            if (game == null)
+                return false;
+
+            var path = GetImageRotaterGameFolder(game, artworkType);
+            if (!Directory.Exists(path))
+                return false;
+
+            try
+            {
+                return Directory
+                    .EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly)
+                    .Any(file => ImageRotaterArtworkExtensions.Contains(Path.GetExtension(file)));
+            }
+            catch (Exception ex)
+            {
+                ThemeExtras.logger.Error(
+                    ex,
+                    $"Error checking ImageRotater {artworkType} folder"
+                );
+                return false;
+            }
+        }
+
+        public ICommand OpenImageRotaterFoldersCommand { get; } =
+            new RelayCommand<object>(
+                _ => { },
+                parameter =>
+                {
+                    var game = GetGameFromParameter(parameter);
+                    return HasImageRotaterArtwork(game, "backgrounds")
+                        || HasImageRotaterArtwork(game, "covers");
+                }
+            );
+
+        private static ICommand CreateOpenImageRotaterFolderCommand(string artworkType)
+        {
+            return new RelayCommand<object>(
+                parameter =>
+                {
+                    try
+                    {
+                        var game = GetGameFromParameter(parameter);
+                        if (game == null)
+                        {
+                            API.Instance.Dialogs.ShowMessage("No game selected.");
+                            return;
+                        }
+
+                        var path = GetImageRotaterGameFolder(game, artworkType);
+                        if (Directory.Exists(path))
+                        {
+                            System.Diagnostics.Process.Start("explorer.exe", $"\"{path}\"");
+                        }
+                        else
+                        {
+                            API.Instance.Dialogs.ShowMessage(
+                                $"ImageRotater {artworkType} folder not found for '{game.Name}':\n{path}"
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ThemeExtras.logger.Error(
+                            ex,
+                            $"Error opening ImageRotater {artworkType} folder"
+                        );
+                        API.Instance.Dialogs.ShowMessage(
+                            $"Error opening ImageRotater {artworkType} folder: {ex.Message}"
+                        );
+                    }
+                },
+                parameter =>
+                {
+                    var game = GetGameFromParameter(parameter);
+                    return HasImageRotaterArtwork(game, artworkType);
+                }
+            );
+        }
+
+        public ICommand OpenImageRotaterCoversFolderCommand { get; } =
+            CreateOpenImageRotaterFolderCommand("covers");
+
+        public ICommand OpenImageRotaterBackgroundsFolderCommand { get; } =
+            CreateOpenImageRotaterFolderCommand("backgrounds");
 
         public ICommand OpenExtraMetadataFolderCommand { get; } =
             new RelayCommand<object>(
