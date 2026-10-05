@@ -234,6 +234,7 @@ namespace Extras
                 {
                     OnPropertyChanged(nameof(EMLGameMenuItems));
                     OnPropertyChanged(nameof(BackgroundChangerGameMenuItems));
+                    OnPropertyChanged(nameof(ImageRotaterGameMenuItems));
                     OnPropertyChanged(nameof(UniPlaySongGameMenuItems));
                     OnPropertyChanged(nameof(ScreenshotsVisualizerGameMenuItems));
                     OnPropertyChanged(nameof(ScreenshotUtilitiesGameMenuItems));
@@ -334,6 +335,56 @@ namespace Extras
                             ThemeExtras.logger.Error(
                                 ex,
                                 $"Failed to create BackgroundChanger menu items."
+                            );
+                        }
+                    }
+                return null;
+            }
+        }
+
+        public IEnumerable<object> ImageRotaterGameMenuItems
+        {
+            get
+            {
+                var api = API.Instance;
+                var id = "72b7d457-0621-429b-8368-665bc53ff896";
+                if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
+                    {
+                        try
+                        {
+                            var items = CreateGameMenuItems(api, plugin);
+                            var settingsItem = new MenuItem
+                            {
+                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
+                                Command = ThemeExtras
+                                    .Instance
+                                    .Settings
+                                    .Commands
+                                    .OpenPluginSettingsCommand,
+                                CommandParameter = id,
+                            };
+                            if (items.Count > 0)
+                            {
+                                items.Insert(0, new Separator());
+                            }
+                            items.Insert(0, settingsItem);
+                            return items;
+                        }
+                        catch (System.Exception ex)
+                        {
+                            ThemeExtras.logger.Error(
+                                ex,
+                                $"Failed to create ImageRotater menu items."
                             );
                         }
                     }
