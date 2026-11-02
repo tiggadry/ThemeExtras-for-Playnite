@@ -232,6 +232,7 @@ namespace Extras
                 SetValue(ref isOpen, value);
                 if (value)
                 {
+                    OnPropertyChanged(nameof(ImageUtilitiesGameMenuItems));
                     OnPropertyChanged(nameof(EMLGameMenuItems));
                     OnPropertyChanged(nameof(BackgroundChangerGameMenuItems));
                     OnPropertyChanged(nameof(ImageRotaterGameMenuItems));
@@ -542,7 +543,68 @@ namespace Extras
             }
         }
 
-        private static IList<object> CreateGameMenuItems(IPlayniteAPI api, Plugin plugin)
+        public IEnumerable<object> ImageUtilitiesGameMenuItems
+        {
+            get
+            {
+                var api = API.Instance;
+                var id = "485ab5f0-bfb1-4c17-93cc-20d8338673be";
+                if (IsOpen && (api.MainView.SelectedGames?.Any() ?? false))
+                    if (
+                        api.Addons?.Plugins?.FirstOrDefault(p =>
+                            string.Equals(
+                                p.Id.ToString(),
+                                id,
+                                System.StringComparison.InvariantCultureIgnoreCase
+                            )
+                        )
+                        is Plugin plugin
+                    )
+                    {
+                        try
+                        {
+                            var imageSection = ResourceProvider.GetString(
+                                "LOCMetadataUtilitiesMenuImageUtilities"
+                            );
+                            var items = CreateGameMenuItems(
+                                api,
+                                plugin,
+                                item => item.MenuSection == imageSection
+                            );
+                            var settingsItem = new MenuItem
+                            {
+                                Header = ResourceProvider.GetString("LOCSettingsLabel"),
+                                Command = ThemeExtras
+                                    .Instance
+                                    .Settings
+                                    .Commands
+                                    .OpenPluginSettingsCommand,
+                                CommandParameter = id,
+                            };
+                            if (items.Count > 0)
+                            {
+                                items.Insert(0, new Separator());
+                            }
+                            items.Insert(0, settingsItem);
+                            return items;
+                        }
+                        catch (System.Exception ex)
+                        {
+                            ThemeExtras.logger.Error(
+                                ex,
+                                $"Failed to create ImageUtilities menu items."
+                            );
+                        }
+                    }
+                return null;
+            }
+        }
+
+        private static IList<object> CreateGameMenuItems(
+            IPlayniteAPI api,
+            Plugin plugin,
+            Func<GameMenuItem, bool> filter = null
+        )
         {
             var menuItems = new ObservableCollection<object>();
             List<Game> games = api.MainView.SelectedGames?.Take(1).ToList() ?? new List<Game>();
@@ -550,6 +612,8 @@ namespace Extras
                 var item in plugin.GetGameMenuItems(new GetGameMenuItemsArgs() { Games = games })
             )
             {
+                if (filter != null && !filter(item))
+                    continue;
                 var path = item
                     .MenuSection.Replace("@", "")
                     .Split(new[] { "|" }, StringSplitOptions.RemoveEmptyEntries)
