@@ -953,7 +953,8 @@ namespace Extras
                 {
                     var game = GetGameFromParameter(parameter);
                     return HasImageRotaterArtwork(game, "backgrounds")
-                        || HasImageRotaterArtwork(game, "covers");
+                        || HasImageRotaterArtwork(game, "covers")
+                        || HasImageRotaterArtwork(game, "logos");
                 }
             );
 
@@ -1007,6 +1008,9 @@ namespace Extras
 
         public ICommand OpenImageRotaterBackgroundsFolderCommand { get; } =
             CreateOpenImageRotaterFolderCommand("backgrounds");
+
+        public ICommand OpenImageRotaterLogosFolderCommand { get; } =
+            CreateOpenImageRotaterFolderCommand("logos");
 
         public ICommand OpenExtraMetadataFolderCommand { get; } =
             new RelayCommand<object>(

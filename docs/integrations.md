@@ -9,6 +9,7 @@ ThemeExtras should still load when one or more of them are not installed.
 |---|---|---|
 | Extra Metadata Loader | `705fdbca-e1fc-4004-b839-1d040b8b4429` | Exposes the extension's selected-game menu items and a settings entry |
 | BackgroundChanger | `3afdd02b-db6c-4b60-8faa-2971d6dfad2a` | Exposes game menu items and opens the game's BackgroundChanger folder when available |
+| ImageRotater | `ImageRotater.72b7d457-0621-429b-8368-665bc53ff896` | Opens the selected game's `backgrounds`, `covers`, and `logos` folders when supported artwork is available |
 | Metadata Utilities | `485ab5f0-bfb1-4c17-93cc-20d8338673be` | Exposes only the Image Utilities submenu (flip/rotate background, cover, icon, logo) and a settings entry |
 | ScreenshotsVisualizer | `c6c8276f-91bf-48e5-a1d1-4bee0b493488` | Exposes menu items and delegates configured screenshot-folder opening to the extension |
 | ScreenshotUtilities | `485d682f-73e9-4d54-b16f-b8dd49e88f90` | Exposes the extension's selected-game commands and settings |
@@ -83,3 +84,20 @@ ThemeExtras also contains direct folder commands for selected games and
 optional extensions. These commands validate that a path exists before
 opening it and show a Playnite message or log an error when the path cannot
 be resolved.
+
+### ImageRotater
+
+ImageRotater stores per-game artwork below its extension-data directory:
+
+```text
+ExtensionsData\72b7d457-0621-429b-8368-665bc53ff896\Images\<GameId>\
+├── backgrounds\
+├── covers\
+└── logos\
+```
+
+ThemeExtras adds an **Open ImageRotater Folders** submenu with one command
+for each directory. The parent menu item is disabled if all three folders
+are missing or contain no supported artwork. Each child is enabled only when
+its own folder contains a supported image or video. Metadata files and cache
+directories are ignored by the availability check.

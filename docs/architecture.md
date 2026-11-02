@@ -144,6 +144,28 @@ ScreenshotsVisualizer menu action. The obsolete duplicate screenshot path
 resolver was removed after it became unused. ThemeExtras does not own the
 current list of screenshot sources; ScreenshotsVisualizer does.
 
+## ImageRotater folder integration
+
+ThemeExtras provides direct folder commands for ImageRotater's per-game
+artwork. The integration uses ImageRotater's plugin ID and resolves folders
+under the Playnite configuration path:
+
+```text
+%AppData%\Playnite\ExtensionsData\
+  72b7d457-0621-429b-8368-665bc53ff896\Images\<GameId>\
+    backgrounds\
+    covers\
+    logos\
+```
+
+The Details View context menu exposes these commands under **Open ImageRotater
+Folders**. The parent command is enabled when at least one supported artwork
+file exists in `backgrounds`, `covers`, or `logos`; each child command checks
+its own directory independently. Supported files are `.jpg`, `.jpeg`, `.png`,
+`.bmp`, `.webp`, `.gif`, `.mp4`, and `.webm`. The check only examines files
+directly in the artwork directory, so ImageRotater metadata and cache
+subdirectories do not make an empty artwork folder appear available.
+
 ## Build constraints
 
 The project uses the existing non-SDK solution in `source/Extras.sln`.

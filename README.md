@@ -22,6 +22,8 @@ continue to use the ThemeExtras manifest format.
 - Optional game-menu integrations for selected Playnite extensions,
   including the Metadata Utilities Image Utilities menu (flip and rotate
   backgrounds, covers, icons, and logos).
+- ImageRotater folder actions for opening the selected game's covers,
+  backgrounds, and logos directories.
 - Theme and plugin folder actions from the Playnite game menu.
 
 ## Requirements and compatibility
@@ -100,6 +102,12 @@ from replacing the file during theme restoration.
 ThemeExtras can expose commands from optional extensions in the selected
 game menu. Current integrations and their behavior are listed in
 [integrations.md](docs/integrations.md).
+
+The ImageRotater integration adds an **Open ImageRotater Folders** submenu
+to the selected game's Details View context menu. It contains separate
+actions for `backgrounds`, `covers`, and `logos` under ImageRotater's
+per-game image directory. The parent item is disabled when none of those
+directories contains supported artwork.
 
 ## Troubleshooting
 

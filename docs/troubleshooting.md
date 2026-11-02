@@ -24,6 +24,24 @@ extensions.
 ThemeExtras delegates this action to ScreenshotsVisualizer. Do not maintain
 a second path list in ThemeExtras.
 
+## ImageRotater folder action is disabled
+
+The ImageRotater entries are available only when ImageRotater is installed
+and the selected game has artwork in the corresponding directory. Check:
+
+1. Confirm that ImageRotater is installed and enabled.
+2. Confirm that the selected game's ImageRotater data is under:
+   `%AppData%\Playnite\ExtensionsData\72b7d457-0621-429b-8368-665bc53ff896\Images\<GameId>`.
+3. Check the relevant `backgrounds`, `covers`, or `logos` directory.
+4. Confirm that the directory contains a supported file:
+   `.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`, `.gif`, `.mp4`, or `.webm`.
+5. Remember that ImageRotater metadata and cache files do not count as
+   artwork.
+
+The parent **Open ImageRotater Folders** item is enabled when any of the
+three artwork directories contains supported artwork. The child item is
+enabled independently for its own directory.
+
 ## Save or configuration folder cannot be opened
 
 1. Confirm that SaveFileView is installed and enabled.

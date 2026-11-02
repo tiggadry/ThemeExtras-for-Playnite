@@ -7,6 +7,11 @@ For the complete technical history, use `git log`.
 
 ### Added
 
+- Added ImageRotater folder actions to the selected game's Details View
+  context menu for `backgrounds`, `covers`, and `logos`.
+- Added artwork-aware enablement for ImageRotater folder actions. The
+  parent menu is enabled when any supported image or video exists in one
+  of the three folders, while each child action is enabled independently.
 - Exposed the Metadata Utilities Image Utilities menu (flip and rotate
   background, cover, icon, and logo) with a settings entry in the selected
   game's ThemeExtras menu, as `Menus.ImageUtilitiesGameMenuItems`.
